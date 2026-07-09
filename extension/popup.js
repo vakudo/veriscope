@@ -237,7 +237,7 @@ async function startCheck() {
     try {
       await chrome.runtime.sendMessage({
         type: "analyze",
-        payload: { text: page.text, title: page.title },
+        payload: { text: page.text, title: page.title, url: tab.url },
       });
     } catch (messageError) {
       renderJob({

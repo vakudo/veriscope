@@ -78,9 +78,12 @@ async def gather_evidence(
     max_results: int,
     top_k: int,
     min_relevance: float = 0.0,
+    exclude_domain: str | None = None,
 ) -> list[EvidenceSource]:
     query = " ".join(claim_text.split()[:16])
     found = await search.search(query, max_results)
+    if exclude_domain:
+        found = [result for result in found if domain_of(result.url) != exclude_domain]
     if not found:
         return []
     vectors = await llm.embed([claim_text] + [f"{r.title}\n{r.snippet}" for r in found])

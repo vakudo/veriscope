@@ -43,6 +43,36 @@ async def test_reprints_judged_once_and_inherit_stance(settings):
     assert len(inherited) == 1
 
 
+async def test_analyzed_article_domain_excluded_from_evidence(settings):
+    llm = FakeLLM(
+        claims=["Компания Альфа купила компанию Бета"],
+        vectors={"ALPHA": [1.0, 0.0, 0.0]},
+    )
+    search = FakeSearch(
+        default=[
+            SearchResult(
+                url="https://one.example/news/1",
+                title="",
+                snippet="ALPHA STANCE_SUPPORTS",
+                published_at="2026-03-05",
+            ),
+            SearchResult(
+                url="https://www.self.example/original-article",
+                title="",
+                snippet="ALPHA STANCE_SUPPORTS",
+                published_at="2026-03-04",
+            ),
+        ]
+    )
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+    result = await pipeline.analyze(
+        text="5 марта 2026 года компания Альфа объявила о покупке компании Бета, сообщил Иван Петров.",
+        url="https://self.example/original-article",
+    )
+    domains = {item.source.domain for item in result.claims[0].evidence}
+    assert domains == {"one.example"}
+
+
 async def test_independent_clusters_judged_separately(settings):
     llm = FakeLLM(
         claims=["Компания Альфа купила компанию Бета"],
