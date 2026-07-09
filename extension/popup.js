@@ -1,5 +1,5 @@
 const DEFAULT_BACKEND = "http://localhost:8000";
-const MAX_PAGE_CHARS = 12000;
+const MAX_PAGE_CHARS = 8000;
 
 const VERDICT_TITLES = {
   supported: "Подтверждается",
@@ -208,10 +208,21 @@ async function startCheck() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const [injection] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: (maxChars) => ({
-        title: document.title,
-        text: document.body ? document.body.innerText.slice(0, maxChars) : "",
-      }),
+      func: (maxChars) => {
+        const candidates = ["article", "main", '[role="main"]', '[itemprop="articleBody"]'];
+        let text = "";
+        for (const selector of candidates) {
+          const node = document.querySelector(selector);
+          if (node && node.innerText && node.innerText.length > 500) {
+            text = node.innerText;
+            break;
+          }
+        }
+        if (!text && document.body) {
+          text = document.body.innerText;
+        }
+        return { title: document.title, text: text.slice(0, maxChars) };
+      },
       args: [MAX_PAGE_CHARS],
     });
     const page = injection.result;

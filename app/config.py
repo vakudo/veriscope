@@ -10,11 +10,12 @@ class Settings(BaseSettings):
     embed_model: str = "bge-m3"
     embed_dim: int = 1024
     database_url: str | None = None
-    search_max_results: int = 8
-    evidence_top_k: int = 4
+    search_max_results: int = 6
+    evidence_top_k: int = 3
     duplicate_threshold: float = 0.88
     cache_similarity_threshold: float = 0.95
-    max_claims: int = 5
+    min_relevance: float = 0.55
+    max_claims: int = 3
     request_timeout: float = 120.0
     backend_url: str = "http://localhost:8000"
     telegram_bot_token: str = ""
