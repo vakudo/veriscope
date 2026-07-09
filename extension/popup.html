@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Veriscope</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Veriscope</h1>
+    <p class="tagline">Ассистент проверки новостей — без фейковых процентов правды</p>
+  </header>
+  <details class="settings">
+    <summary>Настройки</summary>
+    <label for="backend-url">Адрес бэкенда</label>
+    <input id="backend-url" type="url" placeholder="http://localhost:8000">
+    <button id="save-settings" type="button">Сохранить</button>
+  </details>
+  <button id="check-page" type="button">Проверить страницу</button>
+  <div id="status" hidden></div>
+  <div id="result" hidden></div>
+  <script src="popup.js"></script>
+</body>
+</html>

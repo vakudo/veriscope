@@ -1,0 +1,37 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: veriscope
+      POSTGRES_PASSWORD: veriscope
+      POSTGRES_DB: veriscope
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U veriscope"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://veriscope:veriscope@db:5432/veriscope
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  bot:
+    build: .
+    command: ["python", "-m", "bot.main"]
+    env_file: .env
+    environment:
+      BACKEND_URL: http://api:8000
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
