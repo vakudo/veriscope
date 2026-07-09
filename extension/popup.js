@@ -223,10 +223,20 @@ async function startCheck() {
       });
       return;
     }
-    chrome.runtime.sendMessage({
-      type: "analyze",
-      payload: { text: page.text, title: page.title },
-    });
+    try {
+      await chrome.runtime.sendMessage({
+        type: "analyze",
+        payload: { text: page.text, title: page.title },
+      });
+    } catch (messageError) {
+      renderJob({
+        status: "error",
+        startedAt: Date.now(),
+        message:
+          "Фоновый обработчик не отвечает. Перезагрузи расширение: chrome://extensions → кнопка ↻ на карточке Veriscope.",
+      });
+      return;
+    }
     renderJob({ status: "running", startedAt: Date.now(), pageTitle: page.title });
   } catch (error) {
     renderJob({ status: "error", startedAt: Date.now(), message: String(error) });
