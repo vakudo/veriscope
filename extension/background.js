@@ -24,8 +24,9 @@ async function setJob(job) {
 
 async function runAnalysis(payload) {
   const startedAt = Date.now();
+  const pageUrl = payload.url || "";
   startKeepalive();
-  await setJob({ status: "running", startedAt, pageTitle: payload.title || "" });
+  await setJob({ status: "running", startedAt, pageUrl, pageTitle: payload.title || "" });
   try {
     const { backendUrl } = await chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND });
     const response = await fetch(`${backendUrl}/api/analyze`, {
@@ -38,12 +39,13 @@ async function runAnalysis(payload) {
       throw new Error(`HTTP ${response.status}`);
     }
     const result = await response.json();
-    await setJob({ status: "done", startedAt, finishedAt: Date.now(), result });
+    await setJob({ status: "done", startedAt, finishedAt: Date.now(), pageUrl, result });
   } catch (error) {
     await setJob({
       status: "error",
       startedAt,
       finishedAt: Date.now(),
+      pageUrl,
       message: error && error.message ? error.message : String(error),
     });
   } finally {
