@@ -71,5 +71,6 @@ def settings() -> Settings:
         search_max_results=8,
         evidence_top_k=4,
         duplicate_threshold=0.9,
+        min_relevance=0.0,
         max_claims=6,
     )

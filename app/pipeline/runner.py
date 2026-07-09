@@ -55,6 +55,7 @@ class FactCheckPipeline:
             claim.text,
             self.settings.search_max_results,
             self.settings.evidence_top_k,
+            self.settings.min_relevance,
         )
         sources = await mark_independence(self.llm, sources, self.settings.duplicate_threshold)
         representatives: dict[int, EvidenceSource] = {}

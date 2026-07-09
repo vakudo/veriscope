@@ -77,15 +77,21 @@ async def gather_evidence(
     claim_text: str,
     max_results: int,
     top_k: int,
+    min_relevance: float = 0.0,
 ) -> list[EvidenceSource]:
-    found = await search.search(claim_text, max_results)
+    query = " ".join(claim_text.split()[:16])
+    found = await search.search(query, max_results)
     if not found:
         return []
     vectors = await llm.embed([claim_text] + [f"{r.title}\n{r.snippet}" for r in found])
     claim_vector, result_vectors = vectors[0], vectors[1:]
-    ranked = sorted(
-        zip(found, result_vectors, strict=False),
-        key=lambda pair: cosine(claim_vector, pair[1]),
+    scored = [
+        (result, cosine(claim_vector, vector))
+        for result, vector in zip(found, result_vectors, strict=False)
+    ]
+    relevant = sorted(
+        (pair for pair in scored if pair[1] >= min_relevance),
+        key=lambda pair: pair[1],
         reverse=True,
     )
     return [
@@ -96,5 +102,5 @@ async def gather_evidence(
             snippet=result.snippet,
             published_at=result.published_at,
         )
-        for result, _ in ranked[:top_k]
+        for result, _ in relevant[:top_k]
     ]
