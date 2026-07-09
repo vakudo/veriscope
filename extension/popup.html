@@ -7,18 +7,71 @@
 </head>
 <body>
   <header>
-    <h1>Veriscope</h1>
-    <p class="tagline">Ассистент проверки новостей — без фейковых процентов правды</p>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z" fill="var(--accent)"/>
+        <path d="M8.5 12.2l2.3 2.3 4.7-4.7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>Veriscope</h1>
+        <p>Проверка новостей по независимым источникам</p>
+      </div>
+    </div>
+    <button id="settings-toggle" class="icon-button" title="Настройки" aria-label="Настройки">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7zm7.4-3.5a5.9 5.9 0 0 0-.1-1.1l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.9-1.1L14.6 3h-4l-.4 2.8a7.4 7.4 0 0 0-1.9 1.1l-2.4-1-2 3.4 2 1.6a5.9 5.9 0 0 0 0 2.2l-2 1.6 2 3.4 2.4-1c.6.5 1.2.8 1.9 1.1l.4 2.8h4l.4-2.8c.7-.3 1.3-.6 1.9-1.1l2.4 1 2-3.4-2-1.6c.1-.4.1-.7.1-1.1z" fill="currentColor"/>
+      </svg>
+    </button>
   </header>
-  <details class="settings">
-    <summary>Настройки</summary>
+
+  <section id="settings-panel" hidden>
     <label for="backend-url">Адрес бэкенда</label>
-    <input id="backend-url" type="url" placeholder="http://localhost:8000">
-    <button id="save-settings" type="button">Сохранить</button>
-  </details>
-  <button id="check-page" type="button">Проверить страницу</button>
-  <div id="status" hidden></div>
-  <div id="result" hidden></div>
+    <div class="settings-row">
+      <input id="backend-url" type="url" placeholder="http://localhost:8000">
+      <button id="save-settings" type="button">OK</button>
+    </div>
+    <p id="settings-note" class="note" hidden>Сохранено</p>
+  </section>
+
+  <main>
+    <div id="idle-view">
+      <p class="lead">Открой новостную статью и запусти проверку: текст будет разложен на утверждения, каждое проверено по независимым источникам.</p>
+      <button id="check-page" class="primary" type="button">Проверить страницу</button>
+      <p class="note">Локальная LLM работает на CPU — обычно 1–3 минуты. Попап можно закрывать: проверка продолжится в фоне.</p>
+    </div>
+
+    <div id="running-view" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="running-title">Идёт проверка<span id="running-page"></span></p>
+      <p class="elapsed">Прошло: <span id="elapsed">0:00</span></p>
+      <ul class="steps">
+        <li>извлечение утверждений</li>
+        <li>поиск источников</li>
+        <li>проверка независимости</li>
+        <li>позиция каждой группы источников</li>
+      </ul>
+      <p class="note">Можно закрыть попап — результат сохранится.</p>
+    </div>
+
+    <div id="error-view" hidden>
+      <div class="error-card">
+        <p class="error-title">Не удалось выполнить проверку</p>
+        <p id="error-message" class="note"></p>
+        <p class="note">Проверь, что бэкенд запущен (uvicorn app.main:app) и адрес в настройках верен.</p>
+      </div>
+      <button id="retry" class="primary" type="button">Попробовать снова</button>
+    </div>
+
+    <div id="result-view" hidden>
+      <div id="summary-chips" class="chips"></div>
+      <p id="summary-text" class="summary-text"></p>
+      <div id="flags"></div>
+      <div id="claims"></div>
+      <p id="meta" class="note center"></p>
+      <button id="again" class="ghost" type="button">Проверить другую страницу</button>
+    </div>
+  </main>
+
   <script src="popup.js"></script>
 </body>
 </html>

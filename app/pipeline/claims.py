@@ -11,8 +11,8 @@ CLAIMS_SYSTEM = (
 
 
 async def extract_claims(llm, text: str, max_claims: int = 6) -> list[Claim]:
-    user = f"Extract at most {max_claims} claims.\n\nTEXT:\n{text[:6000]}"
-    raw = await llm.chat(CLAIMS_SYSTEM, user)
+    user = f"Extract at most {max_claims} claims.\n\nTEXT:\n{text[:3500]}"
+    raw = await llm.chat(CLAIMS_SYSTEM, user, max_tokens=512)
     parsed = extract_json_value(raw)
     claims: list[Claim] = []
     if isinstance(parsed, list):

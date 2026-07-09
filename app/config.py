@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     evidence_top_k: int = 4
     duplicate_threshold: float = 0.88
     cache_similarity_threshold: float = 0.95
-    max_claims: int = 6
+    max_claims: int = 5
     request_timeout: float = 120.0
     backend_url: str = "http://localhost:8000"
     telegram_bot_token: str = ""

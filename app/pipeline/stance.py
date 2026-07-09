@@ -11,17 +11,19 @@ STANCE_SYSTEM = (
 
 STANCE_VALUES = {stance.value for stance in Stance}
 
+INHERITED_RATIONALE = "Перепечатка того же материала — позиция унаследована от группы источников"
+
 
 async def detect_stance(llm, claim_text: str, source: EvidenceSource) -> EvidenceItem:
     user = (
         f"CLAIM:\n{claim_text}\n\n"
         f"SOURCE TITLE:\n{source.title}\n\n"
-        f"SOURCE EXCERPT:\n{source.snippet[:2000]}"
+        f"SOURCE EXCERPT:\n{source.snippet[:800]}"
     )
     stance = Stance.not_enough_info
     rationale = ""
     try:
-        raw = await llm.chat(STANCE_SYSTEM, user)
+        raw = await llm.chat(STANCE_SYSTEM, user, max_tokens=256)
         parsed = extract_json_value(raw)
         if isinstance(parsed, dict):
             value = str(parsed.get("stance", "")).strip().lower()
