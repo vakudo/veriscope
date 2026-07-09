@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Veriscope",
+  "version": "0.1.0",
+  "description": "Fact-checking assistant: splits the open article into claims and checks them against independent sources",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://localhost:8000/*", "http://127.0.0.1:8000/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Veriscope"
+  }
+}

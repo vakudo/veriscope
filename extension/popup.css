@@ -1,0 +1,131 @@
+body {
+  width: 380px;
+  margin: 0;
+  padding: 12px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: #1c1c1c;
+  background: #fafafa;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.tagline {
+  margin: 4px 0 12px;
+  color: #666;
+}
+
+.settings {
+  margin-bottom: 10px;
+}
+
+.settings label {
+  display: block;
+  margin: 8px 0 4px;
+}
+
+.settings input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  margin-bottom: 6px;
+}
+
+button {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #2456d6;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #9db1e0;
+  cursor: wait;
+}
+
+.settings button {
+  background: #555;
+}
+
+#status {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #eef2fb;
+}
+
+#status.error {
+  background: #fbeeee;
+  color: #8a1f1f;
+}
+
+#result {
+  margin-top: 10px;
+}
+
+.summary {
+  padding: 8px;
+  border-radius: 6px;
+  background: #eef2fb;
+  margin-bottom: 8px;
+}
+
+.flag {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #fdf3e2;
+  margin-bottom: 6px;
+}
+
+.claim {
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+.claim .badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+.badge.supported { background: #2e8b57; }
+.badge.refuted { background: #c0392b; }
+.badge.conflicting { background: #d68a24; }
+.badge.unverifiable { background: #7f8c8d; }
+
+.claim .text {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.claim .explanation {
+  color: #444;
+  margin-bottom: 6px;
+}
+
+.source {
+  margin: 2px 0;
+}
+
+.source a {
+  color: #2456d6;
+  text-decoration: none;
+}
+
+.source .meta {
+  color: #777;
+}
