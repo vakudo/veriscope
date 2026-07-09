@@ -51,6 +51,11 @@ const saveSettingsButton = document.getElementById("save-settings");
 const settingsNote = document.getElementById("settings-note");
 
 let timerId = null;
+let currentTabUrl = "";
+
+function jobBelongsToCurrentTab(job) {
+  return Boolean(job) && job.pageUrl === currentTabUrl;
+}
 
 function showView(name) {
   for (const [key, element] of Object.entries(views)) {
@@ -234,6 +239,7 @@ async function startCheck() {
       });
       return;
     }
+    currentTabUrl = tab.url || "";
     try {
       await chrome.runtime.sendMessage({
         type: "analyze",
@@ -248,7 +254,12 @@ async function startCheck() {
       });
       return;
     }
-    renderJob({ status: "running", startedAt: Date.now(), pageTitle: page.title });
+    renderJob({
+      status: "running",
+      startedAt: Date.now(),
+      pageUrl: currentTabUrl,
+      pageTitle: page.title,
+    });
   } catch (error) {
     renderJob({ status: "error", startedAt: Date.now(), message: String(error) });
   } finally {
@@ -279,13 +290,18 @@ saveSettingsButton.addEventListener("click", async () => {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "session" && changes.job) {
-    renderJob(changes.job.newValue);
+    const job = changes.job.newValue;
+    if (!job || jobBelongsToCurrentTab(job)) {
+      renderJob(job);
+    }
   }
 });
 
 (async () => {
   const { backendUrl } = await chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND });
   backendInput.value = backendUrl;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  currentTabUrl = (tab && tab.url) || "";
   const { job } = await chrome.storage.session.get("job");
-  renderJob(job);
+  renderJob(jobBelongsToCurrentTab(job) ? job : null);
 })();
