@@ -32,6 +32,7 @@ class AnalyzeRequest(BaseModel):
     text: str | None = None
     url: str | None = None
     title: str | None = None
+    force: bool = False
 
 
 class Claim(BaseModel):
@@ -63,6 +64,7 @@ class ClaimVerdict(BaseModel):
     independent_refuting: int
     evidence: list[EvidenceItem]
     explanation: str
+    historical_accuracy: float | None = None
 
 
 class ManipulationFlag(BaseModel):

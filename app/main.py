@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
-from app.cache.store import MemoryEvidenceCache, PgEvidenceCache
+from app.cache.store import MemoryEvidenceCache, MemoryResultCache, PgEvidenceCache
+from app.calibration import load_calibration
 from app.config import Settings, get_settings
 from app.llm import LLMClient
 from app.pipeline.runner import FactCheckPipeline
@@ -34,14 +35,19 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
         else:
             cache = MemoryEvidenceCache(resolved.cache_similarity_threshold)
         app.state.pipeline = FactCheckPipeline(
-            llm=llm, search=DdgsSearch(), cache=cache, settings=resolved
+            llm=llm,
+            search=DdgsSearch(),
+            cache=cache,
+            settings=resolved,
+            result_cache=MemoryResultCache(resolved.result_cache_ttl_seconds),
+            calibration=load_calibration(resolved.calibration_path),
         )
         yield
         await llm.close()
         if isinstance(cache, PgEvidenceCache):
             await cache.close()
 
-    app = FastAPI(title="Veriscope", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Veriscope", version="0.3.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

@@ -14,6 +14,8 @@ class FakeLLM:
 
     async def chat(self, system: str, user: str, **kwargs) -> str:
         self.chat_calls.append((system, user))
+        if "Translate" in system:
+            return "Alpha acquired Beta"
         if "atomic" in system:
             return json.dumps(self.claims)
         if "stance" in system:

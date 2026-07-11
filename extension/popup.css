@@ -222,34 +222,80 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
-.steps {
-  list-style: none;
+.stage-text {
   margin: 0 auto;
   padding: 10px 12px;
-  max-width: 280px;
+  max-width: 300px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.actions-row .ghost {
+  flex: 1;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.link-button {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 16px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.history-item {
+  display: block;
+  width: 100%;
   text-align: left;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  color: var(--muted);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+}
+
+.history-item:hover {
+  border-color: var(--accent);
+}
+
+.history-item .history-title {
+  display: block;
+  font-weight: 600;
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.steps li {
-  padding: 3px 0 3px 16px;
-  position: relative;
-}
-
-.steps li::before {
-  content: "";
-  position: absolute;
-  left: 2px;
-  top: 9px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0.55;
+.history-item .history-meta {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
 }
 
 .error-card {

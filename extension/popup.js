@@ -36,6 +36,13 @@ const views = {
 const checkButton = document.getElementById("check-page");
 const retryButton = document.getElementById("retry");
 const againButton = document.getElementById("again");
+const recheckButton = document.getElementById("recheck");
+const highlightButton = document.getElementById("highlight");
+const copyMdButton = document.getElementById("copy-md");
+const historyBlock = document.getElementById("history-block");
+const historyList = document.getElementById("history-list");
+const clearHistoryButton = document.getElementById("clear-history");
+const stageTextEl = document.getElementById("stage-text");
 const elapsedEl = document.getElementById("elapsed");
 const runningPageEl = document.getElementById("running-page");
 const errorMessageEl = document.getElementById("error-message");
@@ -142,7 +149,11 @@ function renderClaim(verdict) {
   badge.textContent = VERDICT_TITLES[verdict.label] || verdict.label;
   const confidence = document.createElement("span");
   confidence.className = "confidence";
-  confidence.textContent = CONFIDENCE_TITLES[verdict.confidence] || "";
+  const confidenceParts = [CONFIDENCE_TITLES[verdict.confidence] || ""];
+  if (typeof verdict.historical_accuracy === "number") {
+    confidenceParts.push(`на бенчмарке: ${Math.round(verdict.historical_accuracy * 100)}%`);
+  }
+  confidence.textContent = confidenceParts.filter(Boolean).join(" · ");
   badgeRow.append(badge, confidence);
   const text = document.createElement("p");
   text.className = "claim-text";
@@ -191,6 +202,7 @@ function renderJob(job) {
   }
   if (job.status === "running") {
     runningPageEl.textContent = job.pageTitle ? `: ${job.pageTitle}` : "";
+    stageTextEl.textContent = job.stageText || "Идёт проверка…";
     startTimer(job.startedAt);
     showView("running");
     return;
@@ -207,7 +219,172 @@ function renderJob(job) {
   showView("idle");
 }
 
-async function startCheck() {
+function formatHistoryMeta(entry) {
+  const parts = [];
+  if (entry.counts.supported) parts.push(`✓ ${entry.counts.supported}`);
+  if (entry.counts.refuted) parts.push(`✕ ${entry.counts.refuted}`);
+  if (entry.counts.conflicting) parts.push(`⚠ ${entry.counts.conflicting}`);
+  if (entry.counts.unverifiable) parts.push(`? ${entry.counts.unverifiable}`);
+  const date = new Date(entry.time);
+  const stamp = date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${parts.join(" · ")} — ${stamp}`;
+}
+
+async function renderHistory() {
+  const { history } = await chrome.storage.local.get({ history: [] });
+  historyBlock.hidden = history.length === 0;
+  historyList.replaceChildren();
+  for (const entry of history.slice(0, 8)) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "history-item";
+    const title = document.createElement("span");
+    title.className = "history-title";
+    title.textContent = entry.title || entry.url;
+    const meta = document.createElement("span");
+    meta.className = "history-meta";
+    meta.textContent = formatHistoryMeta(entry);
+    item.append(title, meta);
+    item.addEventListener("click", () => {
+      if (entry.url) {
+        chrome.tabs.create({ url: entry.url });
+      }
+    });
+    historyList.append(item);
+  }
+}
+
+function buildMarkdown(result) {
+  const lines = [];
+  lines.push(`# ${result.input_title || "Проверка новости"}`);
+  lines.push("");
+  lines.push(result.summary);
+  if (result.flags.length) {
+    lines.push("");
+    lines.push("## Признаки манипуляции");
+    for (const flag of result.flags) {
+      lines.push(`- ${flag.detail}`);
+    }
+  }
+  for (const verdict of result.claims) {
+    lines.push("");
+    lines.push(`## ${VERDICT_TITLES[verdict.label] || verdict.label}: ${verdict.claim.text}`);
+    lines.push("");
+    lines.push(verdict.explanation);
+    if (verdict.evidence.length) {
+      lines.push("");
+      for (const item of verdict.evidence) {
+        const meta = [
+          SOURCE_TYPE_TITLES[item.source.source_type] || item.source.source_type,
+          item.stance,
+        ];
+        if (item.source.published_at) {
+          meta.push(item.source.published_at.slice(0, 10));
+        }
+        lines.push(`- [${item.source.domain}](${item.source.url}) (${meta.join(", ")})`);
+      }
+    }
+  }
+  lines.push("");
+  lines.push("_Проверено Veriscope — ассистентом проверки фактов без фейковых процентов._");
+  return lines.join("\n");
+}
+
+function highlightOnPage(claims, titles) {
+  const existing = document.querySelectorAll("mark[data-veriscope]");
+  if (existing.length) {
+    for (const el of existing) {
+      const parent = el.parentNode;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      parent.normalize();
+    }
+    return { removed: existing.length };
+  }
+  const colors = {
+    supported: "rgba(46, 155, 87, 0.28)",
+    refuted: "rgba(214, 69, 69, 0.32)",
+    conflicting: "rgba(221, 143, 31, 0.32)",
+    unverifiable: "rgba(127, 140, 141, 0.28)",
+  };
+  const tokenize = (value) => value.toLowerCase().match(/[a-zа-яё0-9]{4,}/g) || [];
+  const root =
+    document.querySelector("article") ||
+    document.querySelector("main") ||
+    document.querySelector('[role="main"]') ||
+    document.body;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const tag = node.parentElement ? node.parentElement.tagName : "";
+    if (node.textContent.trim().length > 60 && !["SCRIPT", "STYLE", "NOSCRIPT"].includes(tag)) {
+      nodes.push(node);
+    }
+  }
+  let highlighted = 0;
+  for (const claim of claims) {
+    const claimWords = new Set(tokenize(claim.text));
+    if (!claimWords.size) continue;
+    let best = null;
+    let bestScore = 0;
+    for (const node of nodes) {
+      let hits = 0;
+      for (const word of tokenize(node.textContent)) {
+        if (claimWords.has(word)) hits += 1;
+      }
+      const score = hits / claimWords.size;
+      if (score > bestScore) {
+        bestScore = score;
+        best = node;
+      }
+    }
+    if (!best || bestScore < 0.35) continue;
+    const mark = document.createElement("mark");
+    mark.dataset.veriscope = claim.label;
+    mark.style.background = colors[claim.label] || colors.unverifiable;
+    mark.style.borderRadius = "3px";
+    mark.style.padding = "0 2px";
+    mark.style.color = "inherit";
+    mark.title = `Veriscope — ${titles[claim.label] || claim.label}. ${claim.explanation}`;
+    best.parentNode.insertBefore(mark, best);
+    mark.appendChild(best);
+    highlighted += 1;
+  }
+  return { highlighted };
+}
+
+async function toggleHighlight(job) {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const claims = job.result.claims.map((verdict) => ({
+    text: verdict.claim.text,
+    label: verdict.label,
+    explanation: verdict.explanation,
+  }));
+  const [injection] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: highlightOnPage,
+    args: [claims, VERDICT_TITLES],
+  });
+  const outcome = injection.result || {};
+  if (outcome.removed) {
+    highlightButton.textContent = "Подсветить на странице";
+  } else if (outcome.highlighted > 0) {
+    highlightButton.textContent = `Снять подсветку (${outcome.highlighted})`;
+  } else {
+    highlightButton.textContent = "Совпадений на странице не нашлось";
+    setTimeout(() => {
+      highlightButton.textContent = "Подсветить на странице";
+    }, 2500);
+  }
+}
+
+async function startCheck(force = false) {
   checkButton.disabled = true;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -243,7 +420,7 @@ async function startCheck() {
     try {
       await chrome.runtime.sendMessage({
         type: "analyze",
-        payload: { text: page.text, title: page.title, url: tab.url },
+        payload: { text: page.text, title: page.title, url: tab.url, force },
       });
     } catch (messageError) {
       renderJob({
@@ -269,12 +446,37 @@ async function startCheck() {
 
 async function resetToIdle() {
   await chrome.storage.session.remove("job");
+  chrome.runtime.sendMessage({ type: "clear-badge" }).catch(() => {});
+  await renderHistory();
   renderJob(null);
 }
 
-checkButton.addEventListener("click", startCheck);
-retryButton.addEventListener("click", startCheck);
+checkButton.addEventListener("click", () => startCheck(false));
+retryButton.addEventListener("click", () => startCheck(false));
+recheckButton.addEventListener("click", () => startCheck(true));
 againButton.addEventListener("click", resetToIdle);
+
+highlightButton.addEventListener("click", async () => {
+  const { job } = await chrome.storage.session.get("job");
+  if (job && job.status === "done" && jobBelongsToCurrentTab(job)) {
+    await toggleHighlight(job);
+  }
+});
+
+copyMdButton.addEventListener("click", async () => {
+  const { job } = await chrome.storage.session.get("job");
+  if (!job || job.status !== "done") return;
+  await navigator.clipboard.writeText(buildMarkdown(job.result));
+  copyMdButton.textContent = "Скопировано ✓";
+  setTimeout(() => {
+    copyMdButton.textContent = "Копировать MD";
+  }, 2000);
+});
+
+clearHistoryButton.addEventListener("click", async () => {
+  await chrome.storage.local.set({ history: [] });
+  await renderHistory();
+});
 
 settingsToggle.addEventListener("click", () => {
   settingsPanel.hidden = !settingsPanel.hidden;
@@ -302,6 +504,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   backendInput.value = backendUrl;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTabUrl = (tab && tab.url) || "";
+  await renderHistory();
   const { job } = await chrome.storage.session.get("job");
   renderJob(jobBelongsToCurrentTab(job) ? job : null);
 })();
