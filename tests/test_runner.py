@@ -65,6 +65,7 @@ async def test_reprints_judged_once_and_inherit_stance(settings):
     assert stance_calls(llm) == 1
     assert verdict.label == VerdictLabel.supported
     assert verdict.independent_supporting == 1
+    assert verdict.search_queries
     assert all(item.stance == Stance.supports for item in verdict.evidence)
     inherited = [item for item in verdict.evidence if item.rationale == INHERITED_RATIONALE]
     assert len(inherited) == 1

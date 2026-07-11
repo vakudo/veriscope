@@ -23,6 +23,9 @@ Veriscope instead makes the verification process transparent:
 - searches for counter-evidence explicitly (a second refutation-oriented query
   per claim) and cross-lingually (Russian claims are also checked against
   English sources);
+- can experimentally plan concrete verification questions and focused searches
+  from date, speaker, location and article-title context (`QUERY_PLANNING=true`),
+  while the measured default remains the simpler neutral/counter-evidence search;
 - reads the full article of each cluster representative and judges stance on
   the most relevant paragraphs, not on a search snippet;
 - re-verifies contested stance judgements: when sources disagree, the minority
@@ -234,6 +237,11 @@ The first exploratory balanced run and its limitations are documented in
 Add `--strict-dates` to reject evidence whose publication date cannot be
 established. Without it, undated evidence remains eligible for better recall. Both
 modes report publication-date coverage in `metrics.json`.
+
+The LLM query planner is experimental and disabled by default because its first
+frozen comparison increased retrieval recall but reduced verdict quality. Reproduce
+that experiment with `--query-planner`; see
+[`docs/evaluation/averitec-query-planner-20.md`](docs/evaluation/averitec-query-planner-20.md).
 
 Results and a selection manifest containing the dataset SHA-256 and original row
 indices are checkpointed under `artifacts/averitec/`. Continue

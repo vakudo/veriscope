@@ -65,6 +65,18 @@ async def test_grounded_refutation_preserves_exact_quote():
     assert item.evidence_quote == "the claim is false"
 
 
+async def test_grounded_support_preserves_exact_quote():
+    raw = (
+        '{"stance": "supports", "rationale": "The report confirms it", '
+        '"evidence_quote": "report explicitly says"}'
+    )
+
+    item = await detect_stance(RawLLM(raw), "claim", SOURCE)
+
+    assert item.stance == Stance.supports
+    assert item.evidence_quote == "report explicitly says"
+
+
 async def test_detect_stance_survives_llm_error():
     class BrokenLLM:
         async def chat(self, system, user, **kwargs):

@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Stance(StrEnum):
@@ -65,6 +65,8 @@ class ClaimVerdict(BaseModel):
     independent_refuting: int
     evidence: list[EvidenceItem]
     explanation: str
+    search_queries: list[str] = Field(default_factory=list)
+    verification_questions: list[str] = Field(default_factory=list)
     historical_accuracy: float | None = None
 
 

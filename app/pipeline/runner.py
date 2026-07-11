@@ -12,7 +12,7 @@ from app.pipeline.independence import mark_independence
 from app.pipeline.manipulation import detect_manipulation
 from app.pipeline.search import (
     SearchProvider,
-    build_queries,
+    build_query_plan,
     domain_of,
     gather_evidence,
     parse_publication_date,
@@ -60,6 +60,7 @@ class FactCheckPipeline:
         lang: str | None = None,
         published_before: date | None = None,
         require_known_dates: bool = False,
+        context: str | None = None,
     ) -> ClaimVerdict:
         """Verify one already-normalized claim without extracting claims from an article."""
         resolved_text = claim_text.strip()
@@ -73,6 +74,7 @@ class FactCheckPipeline:
             lang=lang or detect_language(resolved_text),
             published_before=published_before,
             require_known_dates=require_known_dates,
+            context=context,
         )
 
     async def analyze(
@@ -118,7 +120,7 @@ class FactCheckPipeline:
 
             async def check_and_report(claim: Claim) -> ClaimVerdict:
                 nonlocal done_count
-                verdict = await self._check_claim(claim, exclude_domain, lang)
+                verdict = await self._check_claim(claim, exclude_domain, lang, context=title)
                 async with counter_lock:
                     done_count += 1
                     current = done_count
@@ -187,6 +189,7 @@ class FactCheckPipeline:
         lang: str = "ru",
         published_before: date | None = None,
         require_known_dates: bool = False,
+        context: str | None = None,
     ) -> ClaimVerdict:
         strings = strings_for(lang)
         embedding = None
@@ -198,8 +201,13 @@ class FactCheckPipeline:
                 if exclude_domain:
                     cached = [item for item in cached if item.source.domain != exclude_domain]
                 return aggregate_verdict(claim, cached, lang)
-        queries, translated = await build_queries(
-            self.llm, claim.text, self.settings.cross_lingual_search
+        query_plan = await build_query_plan(
+            self.llm,
+            claim.text,
+            cross_lingual=self.settings.cross_lingual_search,
+            context=context,
+            max_queries=self.settings.query_plan_max_queries,
+            enabled=self.settings.query_planning,
         )
         sources = await gather_evidence(
             llm=self.llm,
@@ -209,8 +217,8 @@ class FactCheckPipeline:
             top_k=self.settings.evidence_top_k,
             min_relevance=self.settings.min_relevance,
             exclude_domain=exclude_domain,
-            queries=queries,
-            alt_claim_text=translated,
+            queries=query_plan.queries,
+            alt_claim_text=query_plan.translated_claim,
             published_before=published_before,
         )
         sources = await mark_independence(self.llm, sources, self.settings.duplicate_threshold)
@@ -287,4 +295,7 @@ class FactCheckPipeline:
                 )
         if use_cache and evidence:
             await self.cache.put(claim.text, embedding, evidence)
-        return aggregate_verdict(claim, evidence, lang)
+        verdict = aggregate_verdict(claim, evidence, lang)
+        verdict.search_queries = query_plan.queries
+        verdict.verification_questions = query_plan.verification_questions
+        return verdict

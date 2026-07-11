@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     embed_dim: int = 1024
     database_url: str | None = None
     search_max_results: int = 6
+    query_plan_max_queries: int = 5
+    query_planning: bool = False
     evidence_top_k: int = 3
     duplicate_threshold: float = 0.88
     cache_similarity_threshold: float = 0.95

@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from ddgs import DDGS
 
+from app.pipeline.json_utils import extract_json_value
 from app.pipeline.similarity import cosine
 from app.schemas import EvidenceSource
 
@@ -18,6 +19,15 @@ TRANSLATE_SYSTEM = (
     "Output only the translation, one line, nothing else."
 )
 
+QUERY_PLAN_SYSTEM = (
+    "You plan web research for a fact-check. Return JSON only with this shape: "
+    '{"questions": ["2-3 concrete verification questions"], '
+    '"queries": ["2-3 concise web search queries"]}. '
+    "Preserve names, dates, quantities and locations. Include one query aimed at a primary or "
+    "official source and one query capable of finding counter-evidence. Do not assume the claim "
+    "is true or false. Queries must be search strings, not full explanations."
+)
+
 
 @dataclass
 class SearchResult:
@@ -25,6 +35,13 @@ class SearchResult:
     title: str
     snippet: str
     published_at: str | None = None
+
+
+@dataclass(frozen=True)
+class QueryPlan:
+    queries: list[str]
+    verification_questions: list[str]
+    translated_claim: str | None = None
 
 
 class SearchProvider(Protocol):
@@ -142,6 +159,65 @@ async def build_queries(llm, claim_text: str, cross_lingual: bool = True) -> tup
     else:
         queries.append(f"{base} fact check false")
     return queries, translated
+
+
+def _clean_plan_items(value, limit: int, max_length: int = 200) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    cleaned = []
+    seen = set()
+    for item in value:
+        text = " ".join(str(item).split()).strip()
+        key = text.casefold()
+        if len(text.split()) < 2 or len(text) > max_length or key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(text)
+        if len(cleaned) >= limit:
+            break
+    return cleaned
+
+
+async def build_query_plan(
+    llm,
+    claim_text: str,
+    cross_lingual: bool = True,
+    context: str | None = None,
+    max_queries: int = 5,
+    enabled: bool = True,
+) -> QueryPlan:
+    fallback_queries, translated = await build_queries(llm, claim_text, cross_lingual)
+    if not enabled:
+        return QueryPlan(queries=fallback_queries, verification_questions=[], translated_claim=translated)
+    user = f"CLAIM:\n{claim_text}"
+    if context:
+        user += f"\n\nCONTEXT:\n{context[:1000]}"
+    planned_queries: list[str] = []
+    questions: list[str] = []
+    try:
+        raw = await llm.chat(QUERY_PLAN_SYSTEM, user, max_tokens=384)
+        parsed = extract_json_value(raw)
+        if isinstance(parsed, dict):
+            planned_queries = _clean_plan_items(parsed.get("queries"), limit=2)
+            questions = _clean_plan_items(parsed.get("questions"), limit=3, max_length=300)
+    except Exception:
+        pass
+
+    queries = []
+    seen = set()
+    for query in [fallback_queries[0], *planned_queries, *fallback_queries[1:]]:
+        key = query.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        queries.append(query)
+        if len(queries) >= max(1, max_queries):
+            break
+    return QueryPlan(
+        queries=queries,
+        verification_questions=questions,
+        translated_claim=translated,
+    )
 
 
 async def gather_evidence(

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from app.config import get_settings
 from app.evaluation.averitec import (
+    claim_context,
     claim_date,
     classification_metrics,
     evidence_date_metrics,
@@ -39,6 +40,11 @@ def parse_args() -> argparse.Namespace:
         "--strict-dates",
         action="store_true",
         help="Reject evidence without a known publication date in historical evaluation",
+    )
+    parser.add_argument(
+        "--query-planner",
+        action="store_true",
+        help="Enable the experimental LLM query planner",
     )
     parser.add_argument("--sleep", type=float, default=1.0, help="Delay between web searches")
     parser.add_argument("--resume", action="store_true", help="Continue a matching partial run")
@@ -127,6 +133,7 @@ async def run() -> None:
         write_json(prediction_path, predictions)
 
     settings = get_settings()
+    settings.query_planning = args.query_planner
     llm = LLMClient(
         base_url=settings.llm_base_url,
         api_key=settings.llm_api_key,
@@ -151,6 +158,7 @@ async def run() -> None:
                 lang="en",
                 published_before=claim_date(reference),
                 require_known_dates=args.strict_dates,
+                context=claim_context(reference),
             )
             predictions.append(prediction_from_verdict(verdict))
             write_json(prediction_path, predictions)
@@ -181,6 +189,7 @@ async def run() -> None:
         "elapsed_seconds": round(time.perf_counter() - started, 1),
         "temporal_filtering": "exclude known source dates after claim_date",
         "strict_dates": args.strict_dates,
+        "query_planning": settings.query_planning,
     }
     write_json(metrics_path, metrics)
     print(f"predictions: {prediction_path}")

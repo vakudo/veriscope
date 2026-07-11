@@ -1,14 +1,16 @@
+import json
 from datetime import date
 
 from app.pipeline.search import (
     SearchResult,
     build_queries,
+    build_query_plan,
     domain_of,
     gather_evidence,
     parse_publication_date,
     published_after,
 )
-from tests.conftest import FakeLLM, FakeSearch
+from tests.conftest import FakeLLM, FakeSearch, RawLLM
 
 
 async def test_build_queries_cyrillic_adds_refutation_and_translation():
@@ -32,6 +34,63 @@ async def test_build_queries_without_cross_lingual():
     )
     assert len(queries) == 2
     assert translated is None
+
+
+async def test_query_plan_combines_fallback_focused_queries_and_context():
+    class PlanningLLM(FakeLLM):
+        async def chat(self, system: str, user: str, **kwargs) -> str:
+            self.chat_calls.append((system, user))
+            if "plan web research" in system:
+                return json.dumps(
+                    {
+                        "questions": [
+                            "What did the official agency report?",
+                            "Was the reported number later corrected?",
+                        ],
+                        "queries": [
+                            "Alpha acquisition official filing 2020",
+                            "Alpha acquisition correction denied",
+                        ],
+                    }
+                )
+            return await super().chat(system, user, **kwargs)
+
+    llm = PlanningLLM()
+    plan = await build_query_plan(
+        llm,
+        "Alpha acquired Beta in 2020",
+        context="Location: GB\nSpeaker: Alpha",
+        max_queries=5,
+    )
+
+    assert plan.queries[0] == "Alpha acquired Beta in 2020"
+    assert "Alpha acquisition official filing 2020" in plan.queries
+    assert "Alpha acquisition correction denied" in plan.queries
+    assert plan.queries[-1].endswith("fact check false")
+    assert len(plan.verification_questions) == 2
+    planner_call = next(call for call in llm.chat_calls if "plan web research" in call[0])
+    assert "Location: GB" in planner_call[1]
+
+
+async def test_query_plan_falls_back_when_planner_returns_invalid_json():
+    plan = await build_query_plan(RawLLM("not json"), "Alpha acquired Beta", max_queries=5)
+
+    assert plan.queries == ["Alpha acquired Beta", "Alpha acquired Beta fact check false"]
+    assert plan.verification_questions == []
+
+
+async def test_query_plan_can_be_disabled_without_calling_planner():
+    llm = FakeLLM()
+    plan = await build_query_plan(
+        llm,
+        "Alpha acquired Beta",
+        max_queries=5,
+        enabled=False,
+    )
+
+    assert plan.queries == ["Alpha acquired Beta", "Alpha acquired Beta fact check false"]
+    assert plan.verification_questions == []
+    assert not any("plan web research" in system for system, _ in llm.chat_calls)
 
 
 async def test_gather_evidence_merges_and_dedupes_queries():

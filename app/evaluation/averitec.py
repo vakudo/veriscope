@@ -86,6 +86,17 @@ def claim_date(reference: dict) -> date | None:
     return parse_publication_date(value) if isinstance(value, str) else None
 
 
+def claim_context(reference: dict) -> str | None:
+    fields = (
+        ("Claim date", reference.get("claim_date")),
+        ("Speaker", reference.get("speaker")),
+        ("Location", reference.get("location_ISO_code")),
+        ("Reporting source", reference.get("reporting_source")),
+    )
+    parts = [f"{label}: {value}" for label, value in fields if value]
+    return "\n".join(parts) or None
+
+
 def prediction_from_verdict(verdict: ClaimVerdict) -> dict:
     evidence_strings = []
     evidence_details = []
@@ -120,6 +131,8 @@ def prediction_from_verdict(verdict: ClaimVerdict) -> dict:
             "independent_supporting": verdict.independent_supporting,
             "independent_refuting": verdict.independent_refuting,
             "evidence": evidence_details,
+            "search_queries": verdict.search_queries,
+            "verification_questions": verdict.verification_questions,
         },
     }
 

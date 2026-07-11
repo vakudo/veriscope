@@ -4,6 +4,7 @@ import pytest
 
 from app.evaluation.averitec import (
     AVERITEC_LABELS,
+    claim_context,
     claim_date,
     classification_metrics,
     evidence_date_metrics,
@@ -86,6 +87,20 @@ def test_claim_date_parses_averitec_format():
     assert claim_date({}) is None
 
 
+def test_claim_context_keeps_available_benchmark_metadata():
+    context = claim_context(
+        {
+            "claim_date": "31-10-2020",
+            "speaker": "Example speaker",
+            "location_ISO_code": "GB",
+            "reporting_source": None,
+        }
+    )
+
+    assert context == "Claim date: 31-10-2020\nSpeaker: Example speaker\nLocation: GB"
+    assert claim_context({}) is None
+
+
 def test_prediction_contains_official_label_and_one_string_per_cluster():
     first = EvidenceSource(
         url="https://one.example/story",
@@ -123,6 +138,8 @@ def test_prediction_contains_official_label_and_one_string_per_cluster():
     assert prediction["string_evidence"] == ["First Evidence"]
     assert len(prediction["veriscope"]["evidence"]) == 2
     assert prediction["veriscope"]["evidence"][0]["published_at"] == "2020-10-30"
+    assert prediction["veriscope"]["search_queries"] == []
+    assert prediction["veriscope"]["verification_questions"] == []
 
 
 def test_prediction_has_scorable_placeholder_when_no_evidence_exists():
