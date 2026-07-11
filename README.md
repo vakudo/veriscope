@@ -20,6 +20,13 @@ Veriscope instead makes the verification process transparent:
 - checks **source independence**: 20 reprints of one press release count as one
   piece of evidence, not twenty (near-duplicate clustering over embeddings +
   earliest-publication heuristic for the likely primary source);
+- searches for counter-evidence explicitly (a second refutation-oriented query
+  per claim) and cross-lingually (Russian claims are also checked against
+  English sources);
+- reads the full article of each cluster representative and judges stance on
+  the most relevant paragraphs, not on a search snippet;
+- re-verifies contested stance judgements: when sources disagree, the minority
+  opinion is asked again and dropped if unstable;
 - flags manipulation signals: clickbait headline, anonymous sources, emotional
   wording, missing dates/names;
 - reports honest verdicts per claim: `supported` / `refuted` / `conflicting` /
@@ -166,6 +173,27 @@ Notable results:
 - errors concentrate in stance detection on borderline snippets, which is the
   argument for fine-tuning the stance component on FEVER (see evaluation
   plan).
+
+## Demo
+
+`docs/index.html` is a static demo with three pre-computed analyses (a real
+news story, a myth compilation, a fabricated local story) produced by this
+pipeline locally. Regenerate with a running backend:
+
+```bash
+python -m scripts.build_demo
+```
+
+To publish: repository Settings → Pages → deploy from branch `main`, folder
+`/docs`.
+
+## Fine-tuning the stance component
+
+`notebooks/stance_lora.ipynb` is a Colab notebook that fine-tunes
+Qwen2.5-7B-Instruct with QLoRA on FEVER gold evidence, using the exact prompt
+the pipeline sends in production. It measures zero-shot vs fine-tuned macro-F1
+and exports a GGUF for Ollama; the calibration table above is the before/after
+benchmark for the whole system.
 
 ## Evaluation plan
 
