@@ -1,3 +1,5 @@
+import json
+
 from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
@@ -69,6 +71,22 @@ async def test_analyze_text_end_to_end(settings):
     }
     assert second["label"] == "unverifiable"
     assert "Проверено утверждений: 2" in body["summary"]
+
+
+async def test_analyze_stream_emits_progress_and_result(settings):
+    async with client_for(build_app(settings)) as client:
+        async with client.stream(
+            "POST", "/api/analyze/stream", json={"text": TEXT, "title": "Альфа покупает Бету"}
+        ) as response:
+            assert response.status_code == 200
+            body = ""
+            async for chunk in response.aiter_text():
+                body += chunk
+    events = [json.loads(line[6:]) for line in body.split("\n") if line.startswith("data: ")]
+    stages = [event["stage"] for event in events]
+    assert "claims_done" in stages
+    assert stages[-1] == "done"
+    assert len(events[-1]["result"]["claims"]) == 2
 
 
 async def test_analyze_requires_text_or_url(settings):

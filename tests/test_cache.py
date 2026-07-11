@@ -58,6 +58,8 @@ async def test_pipeline_skips_search_on_cache_hit(settings):
     pipeline = FactCheckPipeline(llm=llm, search=search, cache=MemoryEvidenceCache(), settings=settings)
     text = "5 марта 2026 года компания Альфа объявила о покупке компании Бета, сообщил Иван Петров."
     first = await pipeline.analyze(text=text)
+    queries_after_first = len(search.queries)
     second = await pipeline.analyze(text=text)
-    assert len(search.queries) == 1
+    assert queries_after_first > 0
+    assert len(search.queries) == queries_after_first
     assert first.claims[0].label == second.claims[0].label

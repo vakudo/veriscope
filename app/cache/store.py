@@ -1,15 +1,40 @@
 import hashlib
 import json
+import time
 from typing import Protocol
 
 import asyncpg
 
 from app.pipeline.similarity import cosine
-from app.schemas import EvidenceItem
+from app.schemas import AnalysisResult, EvidenceItem
 
 
 def claim_key(claim_text: str) -> str:
     return hashlib.sha256(claim_text.strip().lower().encode("utf-8")).hexdigest()
+
+
+def result_key(url: str | None, text: str | None) -> str:
+    basis = (url or "").strip() or (text or "").strip()
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()
+
+
+class MemoryResultCache:
+    def __init__(self, ttl_seconds: float = 21600.0):
+        self.ttl_seconds = ttl_seconds
+        self._items: dict[str, tuple[float, AnalysisResult]] = {}
+
+    async def get(self, key: str) -> AnalysisResult | None:
+        entry = self._items.get(key)
+        if entry is None:
+            return None
+        stored_at, result = entry
+        if time.time() - stored_at > self.ttl_seconds:
+            del self._items[key]
+            return None
+        return result.model_copy(deep=True)
+
+    async def put(self, key: str, result: AnalysisResult) -> None:
+        self._items[key] = (time.time(), result.model_copy(deep=True))
 
 
 class EvidenceCache(Protocol):

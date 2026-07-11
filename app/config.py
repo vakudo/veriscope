@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     cache_similarity_threshold: float = 0.95
     min_relevance: float = 0.55
     max_claims: int = 3
+    cross_lingual_search: bool = True
+    result_cache_ttl_seconds: float = 21600.0
+    calibration_path: str = "calibration.json"
     request_timeout: float = 120.0
     backend_url: str = "http://localhost:8000"
     telegram_bot_token: str = ""

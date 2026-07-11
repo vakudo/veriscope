@@ -1,4 +1,5 @@
 import asyncio
+import re
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlparse
@@ -7,6 +8,13 @@ from ddgs import DDGS
 
 from app.pipeline.similarity import cosine
 from app.schemas import EvidenceSource
+
+CYRILLIC_PATTERN = re.compile(r"[а-яё]", re.IGNORECASE)
+
+TRANSLATE_SYSTEM = (
+    "Translate the user text to English. "
+    "Output only the translation, one line, nothing else."
+)
 
 
 @dataclass
@@ -71,6 +79,39 @@ def domain_of(url: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
+def base_query(claim_text: str) -> str:
+    return " ".join(claim_text.split()[:16])
+
+
+async def translate_to_english(llm, text: str) -> str | None:
+    try:
+        raw = await llm.chat(TRANSLATE_SYSTEM, text[:300], max_tokens=128)
+    except Exception:
+        return None
+    lines = [line.strip() for line in raw.strip().splitlines() if line.strip()]
+    if not lines:
+        return None
+    translated = lines[0]
+    if CYRILLIC_PATTERN.search(translated):
+        return None
+    return translated
+
+
+async def build_queries(llm, claim_text: str, cross_lingual: bool = True) -> tuple[list[str], str | None]:
+    base = base_query(claim_text)
+    queries = [base]
+    translated = None
+    if CYRILLIC_PATTERN.search(claim_text):
+        queries.append(f"{base} опровержение фейк")
+        if cross_lingual:
+            translated = await translate_to_english(llm, claim_text)
+            if translated:
+                queries.append(base_query(translated))
+    else:
+        queries.append(f"{base} fact check false")
+    return queries, translated
+
+
 async def gather_evidence(
     llm,
     search: SearchProvider,
@@ -79,17 +120,29 @@ async def gather_evidence(
     top_k: int,
     min_relevance: float = 0.0,
     exclude_domain: str | None = None,
+    queries: list[str] | None = None,
+    alt_claim_text: str | None = None,
 ) -> list[EvidenceSource]:
-    query = " ".join(claim_text.split()[:16])
-    found = await search.search(query, max_results)
+    if not queries:
+        queries = [base_query(claim_text)]
+    batches = await asyncio.gather(*(search.search(query, max_results) for query in queries))
+    found: list[SearchResult] = []
+    seen: set[str] = set()
+    for batch in batches:
+        for result in batch:
+            if result.url in seen:
+                continue
+            seen.add(result.url)
+            found.append(result)
     if exclude_domain:
         found = [result for result in found if domain_of(result.url) != exclude_domain]
     if not found:
         return []
-    vectors = await llm.embed([claim_text] + [f"{r.title}\n{r.snippet}" for r in found])
-    claim_vector, result_vectors = vectors[0], vectors[1:]
+    claim_texts = [claim_text] + ([alt_claim_text] if alt_claim_text else [])
+    vectors = await llm.embed(claim_texts + [f"{r.title}\n{r.snippet}" for r in found])
+    claim_vectors, result_vectors = vectors[: len(claim_texts)], vectors[len(claim_texts) :]
     scored = [
-        (result, cosine(claim_vector, vector))
+        (result, max(cosine(claim_vector, vector) for claim_vector in claim_vectors))
         for result, vector in zip(found, result_vectors, strict=False)
     ]
     relevant = sorted(
