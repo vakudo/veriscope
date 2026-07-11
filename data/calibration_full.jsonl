@@ -1,0 +1,75 @@
+{"claim": "Юрий Гагарин совершил первый полёт человека в космос 12 апреля 1961 года", "gold": "supported"}
+{"claim": "Эйфелева башня была построена к Всемирной выставке 1889 года в Париже", "gold": "supported"}
+{"claim": "В 2024 году Нобелевскую премию по физике получили Джон Хопфилд и Джеффри Хинтон", "gold": "supported"}
+{"claim": "Температура кипения воды на уровне моря составляет 100 градусов Цельсия", "gold": "supported"}
+{"claim": "Титаник затонул в апреле 1912 года после столкновения с айсбергом", "gold": "supported"}
+{"claim": "Берлинская стена пала в ноябре 1989 года", "gold": "supported"}
+{"claim": "Юрий Гагарин погиб в авиационной катастрофе в 1968 году", "gold": "supported"}
+{"claim": "Илон Маск основал компанию SpaceX в 2002 году", "gold": "supported"}
+{"claim": "Чемпионат мира по футболу 2018 года прошёл в России", "gold": "supported"}
+{"claim": "Сборная Аргентины выиграла чемпионат мира по футболу 2022 года", "gold": "supported"}
+{"claim": "Джо Байден победил на выборах президента США в 2020 году", "gold": "supported"}
+{"claim": "Столица Казахстана — Астана", "gold": "supported"}
+{"claim": "Эверест — высочайшая вершина Земли над уровнем моря", "gold": "supported"}
+{"claim": "СССР прекратил существование в декабре 1991 года", "gold": "supported"}
+{"claim": "Александр Пушкин был смертельно ранен на дуэли в 1837 году", "gold": "supported"}
+{"claim": "Пенициллин открыл Александр Флеминг", "gold": "supported"}
+{"claim": "Космический телескоп Джеймс Уэбб был запущен в декабре 2021 года", "gold": "supported"}
+{"claim": "Летние Олимпийские игры в Токио были перенесены на 2021 год из-за пандемии", "gold": "supported"}
+{"claim": "Периодическую систему химических элементов предложил Дмитрий Менделеев", "gold": "supported"}
+{"claim": "Экипаж Аполлона-11 совершил первую высадку людей на Луну в июле 1969 года", "gold": "supported"}
+{"claim": "Швейцария не является членом Европейского союза", "gold": "supported"}
+{"claim": "Язык программирования Python создал Гвидо ван Россум", "gold": "supported"}
+{"claim": "Компания OpenAI выпустила ChatGPT в ноябре 2022 года", "gold": "supported"}
+{"claim": "Амазонка — крупнейшая река мира по объёму стока воды", "gold": "supported"}
+{"claim": "Владимир Высоцкий умер в июле 1980 года во время московской Олимпиады", "gold": "supported"}
+{"claim": "The Great Fire of London happened in 1666", "gold": "supported"}
+{"claim": "A water molecule consists of hydrogen and oxygen atoms", "gold": "supported"}
+{"claim": "Neil Armstrong was the first human to walk on the Moon", "gold": "supported"}
+{"claim": "The 2024 Summer Olympics were held in Paris", "gold": "supported"}
+{"claim": "Finland joined NATO in 2023", "gold": "supported"}
+{"claim": "Столица Австралии — Сидней", "gold": "refuted"}
+{"claim": "Великая Китайская стена видна невооружённым глазом с Луны", "gold": "refuted"}
+{"claim": "Человек использует только 10 процентов своего мозга", "gold": "refuted"}
+{"claim": "Эйнштейн был двоечником по математике в школе", "gold": "refuted"}
+{"claim": "Викинги носили шлемы с рогами в бою", "gold": "refuted"}
+{"claim": "Память золотой рыбки длится только три секунды", "gold": "refuted"}
+{"claim": "Молния никогда не бьёт дважды в одно и то же место", "gold": "refuted"}
+{"claim": "Летучие мыши полностью слепы", "gold": "refuted"}
+{"claim": "Наполеон был карликом ростом менее 150 сантиметров", "gold": "refuted"}
+{"claim": "Земля имеет форму плоского диска", "gold": "refuted"}
+{"claim": "Вакцины вызывают аутизм у детей", "gold": "refuted"}
+{"claim": "Быков приводит в ярость именно красный цвет", "gold": "refuted"}
+{"claim": "Волосы и ногти продолжают расти после смерти человека", "gold": "refuted"}
+{"claim": "Монета, брошенная с небоскрёба, способна убить пешехода", "gold": "refuted"}
+{"claim": "Сахар вызывает гиперактивность у детей", "gold": "refuted"}
+{"claim": "Человек проглатывает во сне около восьми пауков в год", "gold": "refuted"}
+{"claim": "Столица США — Нью-Йорк", "gold": "refuted"}
+{"claim": "Столица Канады — Торонто", "gold": "refuted"}
+{"claim": "Столица Бразилии — Рио-де-Жанейро", "gold": "refuted"}
+{"claim": "Советский Союз первым высадил человека на Луну", "gold": "refuted"}
+{"claim": "Титаник затонул в Тихом океане", "gold": "refuted"}
+{"claim": "Вторая мировая война закончилась в 1943 году", "gold": "refuted"}
+{"claim": "The capital of Australia is Sydney", "gold": "refuted"}
+{"claim": "Humans use only 10 percent of their brains", "gold": "refuted"}
+{"claim": "The Great Wall of China is visible from the Moon with the naked eye", "gold": "refuted"}
+{"claim": "Тайный совет древних шумеров предсказал точную дату изобретения интернета", "gold": "unverifiable"}
+{"claim": "Компания Ромашка-Технологии из Урюпинска продала четыре миллиона умных чайников за 2025 год", "gold": "unverifiable"}
+{"claim": "Иван Кузнецов из Твери выиграл региональный конкурс по скоростному вязанию в 2019 году", "gold": "unverifiable"}
+{"claim": "В деревне Малые Ключики открылся третий по счёту музей пуговиц", "gold": "unverifiable"}
+{"claim": "Стартап QuantumBorscht привлёк двенадцать миллионов долларов инвестиций в марте 2024 года", "gold": "unverifiable"}
+{"claim": "Кот по кличке Барсик из Омска установил рекорд двора по продолжительности мурлыканья", "gold": "unverifiable"}
+{"claim": "Школа номер 47 города Пскова заняла первое место в области по количеству посаженных деревьев в 2023 году", "gold": "unverifiable"}
+{"claim": "Коллекционер Никита Соколов продал собрание из трёхсот солонок на аукционе в Самаре", "gold": "unverifiable"}
+{"claim": "Фермер из села Верхние Ветлы собрал рекордный для своего района урожай моркови", "gold": "unverifiable"}
+{"claim": "Библиотека посёлка Лесное получила в дар две тысячи книг от анонимного жертвователя", "gold": "unverifiable"}
+{"claim": "Компания Заря-Софт перенесла головной офис из Воронежа в Калугу", "gold": "unverifiable"}
+{"claim": "Семья Ветровых из Рязани выиграла муниципальную лотерею на ремонт подъезда", "gold": "unverifiable"}
+{"claim": "Блогер под ником СеверныйЛис набрал миллион подписчиков за одну неделю 2024 года", "gold": "unverifiable"}
+{"claim": "Кафе Тёплый Угол в Костроме ввело скидку для посетителей в валенках", "gold": "unverifiable"}
+{"claim": "Завод Прогресс-Деталь выпустил юбилейную стотысячную шестерёнку", "gold": "unverifiable"}
+{"claim": "Секретный меморандум 1987 года предсказал точную дату создания первой социальной сети", "gold": "unverifiable"}
+{"claim": "Общество любителей тумана провело двенадцатый ежегодный съезд в Мурманске", "gold": "unverifiable"}
+{"claim": "A bakery in the village of Greenhollow sold fourteen thousand pies during its annual fair", "gold": "unverifiable"}
+{"claim": "Local startup FrostByte Labs hired forty-five engineers in the second quarter of 2024", "gold": "unverifiable"}
+{"claim": "The mayor of the town of Cedarbrook announced a new bicycle lane on Elm Street", "gold": "unverifiable"}
