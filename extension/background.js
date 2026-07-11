@@ -3,11 +3,12 @@ const KEEPALIVE_INTERVAL_MS = 20000;
 const REQUEST_TIMEOUT_MS = 600000;
 const HISTORY_LIMIT = 20;
 
-const STAGE_TEXTS = {
-  extract: "Извлекаю текст статьи…",
-  claims: "Выделяю проверяемые утверждения…",
-  cached: "Беру готовый результат из кэша…",
-};
+const UI_RU = (
+  (chrome.i18n && chrome.i18n.getUILanguage && chrome.i18n.getUILanguage()) ||
+  ""
+)
+  .toLowerCase()
+  .startsWith("ru");
 
 let keepaliveTimer = null;
 
@@ -32,16 +33,6 @@ async function setJob(job) {
 function setBadge(text, color) {
   chrome.action.setBadgeBackgroundColor({ color: color || "#7a8496" });
   chrome.action.setBadgeText({ text: text || "" });
-}
-
-function stageText(event) {
-  if (event.stage === "claims_done") {
-    return `Найдено утверждений: ${event.total}. Ищу источники…`;
-  }
-  if (event.stage === "claim_done") {
-    return `Проверено ${event.done} из ${event.total}…`;
-  }
-  return STAGE_TEXTS[event.stage] || "Идёт проверка…";
 }
 
 async function saveHistoryEntry(pageUrl, pageTitle, result, elapsedMs) {
@@ -89,7 +80,7 @@ async function runAnalysis(payload) {
   startKeepalive();
   setBadge("…", "#3b62e0");
   const baseJob = { status: "running", startedAt, pageUrl, pageTitle };
-  await setJob({ ...baseJob, stageText: "Отправляю на проверку…" });
+  await setJob({ ...baseJob, progress: null });
   try {
     const { backendUrl } = await chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND });
     const request = {
@@ -106,7 +97,7 @@ async function runAnalysis(payload) {
           finalEvent = event;
           return;
         }
-        await setJob({ ...baseJob, stageText: stageText(event) });
+        await setJob({ ...baseJob, progress: event });
       });
     } else {
       const fallback = await fetch(`${backendUrl}/api/analyze`, request);
@@ -158,7 +149,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: "veriscope-check-selection",
-      title: "Проверить в Veriscope",
+      title: UI_RU ? "Проверить в Veriscope" : "Check with Veriscope",
       contexts: ["selection"],
     });
   });

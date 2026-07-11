@@ -1,5 +1,6 @@
 import re
 
+from app.i18n import strings_for
 from app.schemas import ManipulationFlag
 
 EMOTIONAL_WORDS = {
@@ -81,7 +82,10 @@ NAME_PATTERN = re.compile(r"\b[А-ЯЁA-Z][а-яёa-z]+\s+[А-ЯЁA-Z][а-яёa-
 WORD_PATTERN = re.compile(r"[а-яёa-z]+")
 
 
-def detect_manipulation(title: str | None, text: str) -> list[ManipulationFlag]:
+def detect_manipulation(
+    title: str | None, text: str, lang: str = "ru"
+) -> list[ManipulationFlag]:
+    strings = strings_for(lang)
     flags: list[ManipulationFlag] = []
     words = WORD_PATTERN.findall(text.lower())
     emotional_hits = sorted({word for word in words if word in EMOTIONAL_WORDS})
@@ -89,33 +93,24 @@ def detect_manipulation(title: str | None, text: str) -> list[ManipulationFlag]:
         flags.append(
             ManipulationFlag(
                 kind="emotional_language",
-                detail="Эмоционально окрашенная лексика: " + ", ".join(emotional_hits[:8]),
+                detail=strings["flag_emotional"].format(words=", ".join(emotional_hits[:8])),
             )
         )
     anonymous_hits = [pattern.pattern for pattern in ANONYMOUS_PATTERNS if pattern.search(text)]
     if anonymous_hits:
         flags.append(
-            ManipulationFlag(
-                kind="anonymous_sources",
-                detail="Текст ссылается на анонимные или неназванные источники",
-            )
+            ManipulationFlag(kind="anonymous_sources", detail=strings["flag_anonymous"])
         )
     if title:
         clickbait_hits = [pattern for pattern in CLICKBAIT_PATTERNS if pattern.search(title)]
         if clickbait_hits:
             flags.append(
-                ManipulationFlag(
-                    kind="clickbait_title",
-                    detail="Заголовок содержит кликбейт-приёмы",
-                )
+                ManipulationFlag(kind="clickbait_title", detail=strings["flag_clickbait"])
             )
     has_dates = bool(DATE_PATTERN.search(text))
     has_names = bool(NAME_PATTERN.search(text))
     if not has_dates and not has_names:
         flags.append(
-            ManipulationFlag(
-                kind="missing_attribution",
-                detail="В тексте нет ни дат, ни имён — утверждения сложно привязать к проверяемым фактам",
-            )
+            ManipulationFlag(kind="missing_attribution", detail=strings["flag_missing"])
         )
     return flags
