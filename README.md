@@ -17,6 +17,8 @@ Veriscope instead makes the verification process transparent:
   then deduplicates and selects claims round-robin so the ending is not ignored;
 - searches evidence per claim and shows sources with dates and types
   (possible primary source / reprint / opinion);
+- reports a transparent domain-based source category (official, academic,
+  fact-check, social or other) without turning it into a hidden trust score;
 - classifies the stance of every (claim, source) pair:
   `supports` / `refutes` / `not_enough_info`;
 - checks **source independence**: 20 reprints of one press release count as one

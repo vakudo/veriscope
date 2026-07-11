@@ -12,7 +12,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from app.config import get_settings
-from app.schemas import AnalysisResult, SourceType, VerdictLabel
+from app.schemas import AnalysisResult, SourceCategory, SourceType, VerdictLabel
 
 URL_PATTERN = re.compile(r"https?://\S+")
 
@@ -36,6 +36,13 @@ TEXTS = {
             SourceType.reprint: "перепечатка",
             SourceType.opinion: "мнение",
             SourceType.unknown: "тип не определён",
+        },
+        "source_categories": {
+            SourceCategory.official: "официальный",
+            SourceCategory.academic: "научный",
+            SourceCategory.fact_check: "фактчек",
+            SourceCategory.social: "соцсеть",
+            SourceCategory.other: "прочее",
         },
         "start": (
             "Пришлите текст новости или ссылку на статью — я разложу её на проверяемые "
@@ -69,6 +76,13 @@ TEXTS = {
             SourceType.reprint: "reprint",
             SourceType.opinion: "opinion",
             SourceType.unknown: "type unknown",
+        },
+        "source_categories": {
+            SourceCategory.official: "official",
+            SourceCategory.academic: "academic",
+            SourceCategory.fact_check: "fact-check",
+            SourceCategory.social: "social",
+            SourceCategory.other: "other",
         },
         "start": (
             "Send me a news text or an article link — I will split it into checkable "
@@ -163,6 +177,7 @@ def format_result(result: AnalysisResult, texts: dict) -> str:
         for item in verdict.evidence[:3]:
             source = item.source
             meta = texts["source_types"][source.source_type]
+            meta += f", {texts['source_categories'][source.source_category]}"
             if source.published_at:
                 meta += f", {html.escape(source.published_at[:10])}"
             lines.append(

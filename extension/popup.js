@@ -66,6 +66,13 @@ const I18N = {
       opinion: "мнение",
       unknown: "тип не определён",
     },
+    sourceCategories: {
+      official: "официальный",
+      academic: "научный",
+      fact_check: "фактчек",
+      social: "соцсеть",
+      other: "прочее",
+    },
   },
   en: {
     locale: "en-US",
@@ -120,6 +127,13 @@ const I18N = {
       reprint: "reprint",
       opinion: "opinion",
       unknown: "type unknown",
+    },
+    sourceCategories: {
+      official: "official",
+      academic: "academic",
+      fact_check: "fact-check",
+      social: "social",
+      other: "other",
     },
   },
 };
@@ -245,6 +259,11 @@ function renderSource(item) {
   link.rel = "noopener";
   link.textContent = item.source.domain;
   const metaParts = [T.sourceTypes[item.source.source_type] || item.source.source_type];
+  if (item.source.source_category) {
+    metaParts.push(
+      T.sourceCategories[item.source.source_category] || item.source.source_category,
+    );
+  }
   if (item.source.published_at) {
     metaParts.push(item.source.published_at.slice(0, 10));
   }

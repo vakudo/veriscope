@@ -112,6 +112,7 @@ def prediction_from_verdict(verdict: ClaimVerdict) -> dict:
                 "published_at": source.published_at,
                 "cluster_id": source.cluster_id,
                 "source_type": source.source_type.value,
+                "source_category": source.source_category.value,
                 "stance": item.stance.value,
                 "rationale": item.rationale,
                 "evidence_quote": item.evidence_quote,
@@ -203,6 +204,15 @@ def evidence_date_metrics(predictions: Sequence[dict]) -> dict:
         "unknown_publication_dates": len(dates) - known,
         "publication_date_coverage": _safe_divide(known, len(dates)),
     }
+
+
+def source_category_metrics(predictions: Sequence[dict]) -> dict[str, int]:
+    categories: dict[str, int] = {}
+    for prediction in predictions:
+        for evidence in prediction.get("veriscope", {}).get("evidence", []):
+            category = str(evidence.get("source_category") or "other")
+            categories[category] = categories.get(category, 0) + 1
+    return dict(sorted(categories.items()))
 
 
 def _safe_divide(numerator: float, denominator: float) -> float:

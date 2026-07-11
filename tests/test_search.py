@@ -1,15 +1,19 @@
 import json
 from datetime import date
 
+import pytest
+
 from app.pipeline.search import (
     SearchResult,
     build_queries,
     build_query_plan,
+    classify_source_category,
     domain_of,
     gather_evidence,
     parse_publication_date,
     published_after,
 )
+from app.schemas import SourceCategory
 from tests.conftest import FakeLLM, FakeSearch, RawLLM
 
 
@@ -173,6 +177,21 @@ async def test_query_truncated_to_first_words():
 def test_domain_of_strips_www():
     assert domain_of("https://www.example.com/news/1") == "example.com"
     assert domain_of("https://sub.example.com/x") == "sub.example.com"
+
+
+@pytest.mark.parametrize(
+    ("domain", "expected"),
+    [
+        ("cdc.gov", SourceCategory.official),
+        ("ec.europa.eu", SourceCategory.official),
+        ("ox.ac.uk", SourceCategory.academic),
+        ("sub.politifact.com", SourceCategory.fact_check),
+        ("x.com", SourceCategory.social),
+        ("example.com", SourceCategory.other),
+    ],
+)
+def test_source_category_is_transparent_domain_taxonomy(domain, expected):
+    assert classify_source_category(domain) == expected
 
 
 def test_publication_date_parses_dataset_iso_and_http_formats():

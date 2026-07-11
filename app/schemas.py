@@ -16,6 +16,14 @@ class SourceType(StrEnum):
     unknown = "unknown"
 
 
+class SourceCategory(StrEnum):
+    official = "official"
+    academic = "academic"
+    fact_check = "fact_check"
+    social = "social"
+    other = "other"
+
+
 class VerdictLabel(StrEnum):
     supported = "supported"
     refuted = "refuted"
@@ -47,6 +55,7 @@ class EvidenceSource(BaseModel):
     snippet: str = ""
     published_at: str | None = None
     source_type: SourceType = SourceType.unknown
+    source_category: SourceCategory = SourceCategory.other
     cluster_id: int = -1
 
 

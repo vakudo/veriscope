@@ -12,6 +12,7 @@ from app.evaluation.averitec import (
     load_references,
     prediction_from_verdict,
     select_references,
+    source_category_metrics,
     stratified_indices,
 )
 from app.schemas import (
@@ -20,6 +21,7 @@ from app.schemas import (
     Confidence,
     EvidenceItem,
     EvidenceSource,
+    SourceCategory,
     SourceType,
     Stance,
     VerdictLabel,
@@ -109,6 +111,7 @@ def test_prediction_contains_official_label_and_one_string_per_cluster():
         snippet="Evidence",
         published_at="2020-10-30",
         source_type=SourceType.possible_primary,
+        source_category=SourceCategory.official,
         cluster_id=0,
     )
     reprint = EvidenceSource(
@@ -138,6 +141,7 @@ def test_prediction_contains_official_label_and_one_string_per_cluster():
     assert prediction["string_evidence"] == ["First Evidence"]
     assert len(prediction["veriscope"]["evidence"]) == 2
     assert prediction["veriscope"]["evidence"][0]["published_at"] == "2020-10-30"
+    assert prediction["veriscope"]["evidence"][0]["source_category"] == "official"
     assert prediction["veriscope"]["search_queries"] == []
     assert prediction["veriscope"]["verification_questions"] == []
 
@@ -199,4 +203,25 @@ def test_evidence_date_metrics_report_known_and_unknown_coverage():
         "known_publication_dates": 1,
         "unknown_publication_dates": 2,
         "publication_date_coverage": 1 / 3,
+    }
+
+
+def test_source_category_metrics_count_retained_evidence():
+    predictions = [
+        {
+            "veriscope": {
+                "evidence": [
+                    {"source_category": "official"},
+                    {"source_category": "official"},
+                    {"source_category": "fact_check"},
+                    {},
+                ]
+            }
+        }
+    ]
+
+    assert source_category_metrics(predictions) == {
+        "fact_check": 1,
+        "official": 2,
+        "other": 1,
     }

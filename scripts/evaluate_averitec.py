@@ -15,6 +15,7 @@ from app.evaluation.averitec import (
     load_references,
     prediction_from_verdict,
     select_references,
+    source_category_metrics,
     stratified_indices,
 )
 from app.llm import LLMClient
@@ -177,6 +178,7 @@ async def run() -> None:
 
     metrics = classification_metrics(predictions, references)
     metrics["evidence_dates"] = evidence_date_metrics(predictions)
+    metrics["source_categories"] = source_category_metrics(predictions)
     metrics["run"] = {
         "dataset": str(Path(args.dataset).resolve()),
         "dataset_sha256": manifest["dataset_sha256"],

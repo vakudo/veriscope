@@ -10,7 +10,7 @@ from ddgs import DDGS
 
 from app.pipeline.json_utils import extract_json_value
 from app.pipeline.similarity import cosine
-from app.schemas import EvidenceSource
+from app.schemas import EvidenceSource, SourceCategory
 
 CYRILLIC_PATTERN = re.compile(r"[а-яё]", re.IGNORECASE)
 
@@ -27,6 +27,42 @@ QUERY_PLAN_SYSTEM = (
     "official source and one query capable of finding counter-evidence. Do not assume the claim "
     "is true or false. Queries must be search strings, not full explanations."
 )
+
+FACT_CHECK_DOMAINS = {
+    "factcheck.org",
+    "fullfact.org",
+    "leadstories.com",
+    "politifact.com",
+    "snopes.com",
+    "checkyourfact.com",
+    "boomlive.in",
+    "altnews.in",
+}
+
+SOCIAL_DOMAINS = {
+    "facebook.com",
+    "instagram.com",
+    "linkedin.com",
+    "reddit.com",
+    "t.me",
+    "tiktok.com",
+    "twitter.com",
+    "vk.com",
+    "x.com",
+    "youtube.com",
+}
+
+OFFICIAL_SUFFIXES = (
+    ".gov",
+    ".gov.uk",
+    ".gc.ca",
+    ".gouv.fr",
+    ".europa.eu",
+    ".un.org",
+)
+
+ACADEMIC_SUFFIXES = (".edu", ".ac.uk", ".ac.jp", ".edu.au")
+ACADEMIC_DOMAINS = {"doi.org", "nature.com", "sciencedirect.com", "springer.com"}
 
 
 @dataclass
@@ -126,6 +162,27 @@ class DdgsSearch:
 def domain_of(url: str) -> str:
     host = urlparse(url).netloc.lower()
     return host[4:] if host.startswith("www.") else host
+
+
+def classify_source_category(domain: str) -> SourceCategory:
+    normalized = domain.lower().removeprefix("www.")
+    if normalized in FACT_CHECK_DOMAINS or any(
+        normalized.endswith(f".{item}") for item in FACT_CHECK_DOMAINS
+    ):
+        return SourceCategory.fact_check
+    if normalized in SOCIAL_DOMAINS or any(
+        normalized.endswith(f".{item}") for item in SOCIAL_DOMAINS
+    ):
+        return SourceCategory.social
+    if normalized in {"who.int", "worldbank.org", "oecd.org"} or any(
+        normalized.endswith(suffix) for suffix in OFFICIAL_SUFFIXES
+    ):
+        return SourceCategory.official
+    if normalized in ACADEMIC_DOMAINS or any(
+        normalized.endswith(suffix) for suffix in ACADEMIC_SUFFIXES
+    ):
+        return SourceCategory.academic
+    return SourceCategory.other
 
 
 def base_query(claim_text: str) -> str:
@@ -268,6 +325,7 @@ async def gather_evidence(
             title=result.title,
             snippet=result.snippet,
             published_at=result.published_at,
+            source_category=classify_source_category(domain_of(result.url)),
         )
         for result, _ in relevant[:top_k]
     ]
