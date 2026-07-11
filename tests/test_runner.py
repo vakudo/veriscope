@@ -1,6 +1,8 @@
 import json
 from datetime import date
 
+import pytest
+
 from app.cache.store import MemoryResultCache
 from app.pipeline.extract import Article
 from app.pipeline.runner import FactCheckPipeline
@@ -325,3 +327,35 @@ async def test_historical_verification_does_not_read_or_write_evidence_cache(set
     )
 
     assert verdict.label == VerdictLabel.supported
+
+
+async def test_strict_historical_verification_drops_undated_evidence(settings):
+    llm = FakeLLM(vectors={"ALPHA": [1.0, 0.0, 0.0]})
+    search = FakeSearch(
+        default=[
+            SearchResult(
+                url="https://unknown.example/story",
+                title="",
+                snippet="ALPHA STANCE_SUPPORTS",
+            )
+        ]
+    )
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+
+    verdict = await pipeline.verify_claim(
+        "ALPHA historical claim",
+        lang="en",
+        published_before=date(2020, 10, 31),
+        require_known_dates=True,
+    )
+
+    assert verdict.label == VerdictLabel.unverifiable
+    assert verdict.evidence == []
+
+
+async def test_strict_dates_require_a_cutoff(settings):
+    llm, search = make_setup()
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+
+    with pytest.raises(ValueError, match="needs a publication cutoff"):
+        await pipeline.verify_claim("ALPHA claim", require_known_dates=True)

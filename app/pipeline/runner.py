@@ -15,6 +15,7 @@ from app.pipeline.search import (
     build_queries,
     domain_of,
     gather_evidence,
+    parse_publication_date,
     published_after,
 )
 from app.pipeline.similarity import cosine
@@ -58,16 +59,20 @@ class FactCheckPipeline:
         exclude_domain: str | None = None,
         lang: str | None = None,
         published_before: date | None = None,
+        require_known_dates: bool = False,
     ) -> ClaimVerdict:
         """Verify one already-normalized claim without extracting claims from an article."""
         resolved_text = claim_text.strip()
         if not resolved_text:
             raise ValueError("claim text is required")
+        if require_known_dates and published_before is None:
+            raise ValueError("require_known_dates needs a publication cutoff")
         return await self._check_claim(
             Claim(id=claim_id, text=resolved_text),
             exclude_domain=exclude_domain,
             lang=lang or detect_language(resolved_text),
             published_before=published_before,
+            require_known_dates=require_known_dates,
         )
 
     async def analyze(
@@ -157,6 +162,8 @@ class FactCheckPipeline:
             return
         if article is None:
             return
+        if article.published_at and not source.published_at:
+            source.published_at = article.published_at
         paragraphs = [
             line.strip() for line in article.text.splitlines() if len(line.strip()) >= 80
         ][:40]
@@ -172,8 +179,6 @@ class FactCheckPipeline:
             reverse=True,
         )
         source.snippet = " … ".join(paragraph for paragraph, _ in ranked[:2])[:1600]
-        if article.published_at and not source.published_at:
-            source.published_at = article.published_at
 
     async def _check_claim(
         self,
@@ -181,6 +186,7 @@ class FactCheckPipeline:
         exclude_domain: str | None = None,
         lang: str = "ru",
         published_before: date | None = None,
+        require_known_dates: bool = False,
     ) -> ClaimVerdict:
         strings = strings_for(lang)
         embedding = None
@@ -223,18 +229,22 @@ class FactCheckPipeline:
                     for representative in representatives.values()
                 )
             )
-        if published_before:
-            future_clusters = {
+        if published_before or require_known_dates:
+            excluded_clusters = {
                 cluster_id
                 for cluster_id, representative in representatives.items()
                 if published_after(representative.published_at, published_before)
+                or (
+                    require_known_dates
+                    and parse_publication_date(representative.published_at) is None
+                )
             }
-            if future_clusters:
-                sources = [source for source in sources if source.cluster_id not in future_clusters]
+            if excluded_clusters:
+                sources = [source for source in sources if source.cluster_id not in excluded_clusters]
                 representatives = {
                     cluster_id: representative
                     for cluster_id, representative in representatives.items()
-                    if cluster_id not in future_clusters
+                    if cluster_id not in excluded_clusters
                 }
         judged = list(
             await asyncio.gather(

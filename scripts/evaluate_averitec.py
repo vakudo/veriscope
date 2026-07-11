@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.evaluation.averitec import (
     claim_date,
     classification_metrics,
+    evidence_date_metrics,
     fact_check_domain,
     load_references,
     prediction_from_verdict,
@@ -34,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         help="Select this many deterministic examples from each of the four labels",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--strict-dates",
+        action="store_true",
+        help="Reject evidence without a known publication date in historical evaluation",
+    )
     parser.add_argument("--sleep", type=float, default=1.0, help="Delay between web searches")
     parser.add_argument("--resume", action="store_true", help="Continue a matching partial run")
     return parser.parse_args()
@@ -144,6 +150,7 @@ async def run() -> None:
                 exclude_domain=fact_check_domain(reference),
                 lang="en",
                 published_before=claim_date(reference),
+                require_known_dates=args.strict_dates,
             )
             predictions.append(prediction_from_verdict(verdict))
             write_json(prediction_path, predictions)
@@ -161,6 +168,7 @@ async def run() -> None:
         await llm.close()
 
     metrics = classification_metrics(predictions, references)
+    metrics["evidence_dates"] = evidence_date_metrics(predictions)
     metrics["run"] = {
         "dataset": str(Path(args.dataset).resolve()),
         "dataset_sha256": manifest["dataset_sha256"],
@@ -172,6 +180,7 @@ async def run() -> None:
         "verify_conflicts": settings.verify_conflicts,
         "elapsed_seconds": round(time.perf_counter() - started, 1),
         "temporal_filtering": "exclude known source dates after claim_date",
+        "strict_dates": args.strict_dates,
     }
     write_json(metrics_path, metrics)
     print(f"predictions: {prediction_path}")

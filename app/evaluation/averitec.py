@@ -177,5 +177,20 @@ def classification_metrics(predictions: Sequence[dict], references: Sequence[dic
     }
 
 
+def evidence_date_metrics(predictions: Sequence[dict]) -> dict:
+    dates = [
+        evidence.get("published_at")
+        for prediction in predictions
+        for evidence in prediction.get("veriscope", {}).get("evidence", [])
+    ]
+    known = sum(parse_publication_date(value) is not None for value in dates)
+    return {
+        "evidence_items": len(dates),
+        "known_publication_dates": known,
+        "unknown_publication_dates": len(dates) - known,
+        "publication_date_coverage": _safe_divide(known, len(dates)),
+    }
+
+
 def _safe_divide(numerator: float, denominator: float) -> float:
     return numerator / denominator if denominator else 0.0

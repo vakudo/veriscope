@@ -231,6 +231,10 @@ python -m scripts.evaluate_averitec ../AVeriTeC/data/dev.json \
 The first exploratory balanced run and its limitations are documented in
 [`docs/evaluation/averitec-baseline-20.md`](docs/evaluation/averitec-baseline-20.md).
 
+Add `--strict-dates` to reject evidence whose publication date cannot be
+established. Without it, undated evidence remains eligible for better recall. Both
+modes report publication-date coverage in `metrics.json`.
+
 Results and a selection manifest containing the dataset SHA-256 and original row
 indices are checkpointed under `artifacts/averitec/`. Continue
 an interrupted matching run with `--resume`. Omit `--limit` for the complete dev

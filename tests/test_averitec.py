@@ -6,6 +6,7 @@ from app.evaluation.averitec import (
     AVERITEC_LABELS,
     claim_date,
     classification_metrics,
+    evidence_date_metrics,
     fact_check_domain,
     load_references,
     prediction_from_verdict,
@@ -161,3 +162,24 @@ def test_classification_metrics_include_abstention_and_confusion():
 def test_classification_metrics_reject_length_mismatch():
     with pytest.raises(ValueError, match="length mismatch"):
         classification_metrics([], [reference("claim", "Supported")])
+
+
+def test_evidence_date_metrics_report_known_and_unknown_coverage():
+    predictions = [
+        {
+            "veriscope": {
+                "evidence": [
+                    {"published_at": "2020-10-31"},
+                    {"published_at": None},
+                    {"published_at": "unknown"},
+                ]
+            }
+        }
+    ]
+
+    assert evidence_date_metrics(predictions) == {
+        "evidence_items": 3,
+        "known_publication_dates": 1,
+        "unknown_publication_dates": 2,
+        "publication_date_coverage": 1 / 3,
+    }
