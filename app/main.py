@@ -40,7 +40,9 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
             cache=cache,
             settings=resolved,
             result_cache=MemoryResultCache(resolved.result_cache_ttl_seconds),
-            calibration=load_calibration(resolved.calibration_path),
+            calibration=load_calibration(
+                resolved.calibration_path, resolved.calibration_min_samples
+            ),
         )
         yield
         await llm.close()

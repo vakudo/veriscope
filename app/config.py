@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     cross_lingual_search: bool = True
     result_cache_ttl_seconds: float = 21600.0
     calibration_path: str = "calibration.json"
+    calibration_min_samples: int = 20
     request_timeout: float = 120.0
     backend_url: str = "http://localhost:8000"
     telegram_bot_token: str = ""
