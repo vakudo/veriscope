@@ -1,30 +1,153 @@
 const DEFAULT_BACKEND = "http://localhost:8000";
 const MAX_PAGE_CHARS = 8000;
 
-const VERDICT_TITLES = {
-  supported: "Подтверждается",
-  refuted: "Опровергается",
-  conflicting: "Противоречиво",
-  unverifiable: "Не проверяется",
+const LANG = (
+  (chrome.i18n && chrome.i18n.getUILanguage && chrome.i18n.getUILanguage()) ||
+  navigator.language ||
+  "en"
+)
+  .toLowerCase()
+  .startsWith("ru")
+  ? "ru"
+  : "en";
+
+const I18N = {
+  ru: {
+    locale: "ru-RU",
+    tagline: "Проверка новостей по независимым источникам",
+    settings_label: "Адрес бэкенда",
+    settings_saved: "Сохранено",
+    lead: "Открой новостную статью и запусти проверку: текст будет разложен на утверждения, каждое проверено по независимым источникам.",
+    check_page: "Проверить страницу",
+    tip: "Совет: выдели фрагмент текста и выбери «Проверить в Veriscope» в контекстном меню — проверка одного абзаца заметно быстрее.",
+    history_title: "Недавние проверки",
+    clear_history: "очистить",
+    running_title: "Идёт проверка",
+    elapsed_label: "Прошло:",
+    running_note: "Можно закрыть попап — результат сохранится.",
+    error_title: "Не удалось выполнить проверку",
+    error_hint: "Проверь, что бэкенд запущен (uvicorn app.main:app) и адрес в настройках верен.",
+    retry: "Попробовать снова",
+    highlight: "Подсветить на странице",
+    unhighlight: (n) => `Снять подсветку (${n})`,
+    no_matches: "Совпадений на странице не нашлось",
+    copy_md: "Копировать MD",
+    copied: "Скопировано ✓",
+    recheck: "Перепроверить заново",
+    another: "Другая страница",
+    took: (t) => `Проверка заняла ${t}`,
+    stage_default: "Идёт проверка…",
+    stage_sending: "Отправляю на проверку…",
+    stage_extract: "Извлекаю текст статьи…",
+    stage_claims: "Выделяю проверяемые утверждения…",
+    stage_cached: "Беру готовый результат из кэша…",
+    stage_claims_done: (n) => `Найдено утверждений: ${n}. Ищу источники…`,
+    stage_claim_done: (d, t) => `Проверено ${d} из ${t}…`,
+    error_no_text: "На этой странице не удалось прочитать текст",
+    error_no_worker:
+      "Фоновый обработчик не отвечает. Перезагрузи расширение: chrome://extensions → кнопка ↻ на карточке Veriscope.",
+    benchmark: (p) => `на бенчмарке: ${p}%`,
+    md_title_fallback: "Проверка новости",
+    md_flags: "Признаки манипуляции",
+    md_footer: "_Проверено Veriscope — ассистентом проверки фактов без фейковых процентов._",
+    verdicts: {
+      supported: "Подтверждается",
+      refuted: "Опровергается",
+      conflicting: "Противоречиво",
+      unverifiable: "Не проверяется",
+    },
+    confidence: {
+      high: "уверенность: высокая",
+      low: "уверенность: низкая",
+    },
+    sourceTypes: {
+      possible_primary: "возможный первоисточник",
+      reprint: "перепечатка",
+      opinion: "мнение",
+      unknown: "тип не определён",
+    },
+  },
+  en: {
+    locale: "en-US",
+    tagline: "News checking against independent sources",
+    settings_label: "Backend address",
+    settings_saved: "Saved",
+    lead: "Open a news article and run a check: the text is split into claims, each verified against independent sources.",
+    check_page: "Check this page",
+    tip: "Tip: select a text fragment and pick “Check with Veriscope” in the context menu — checking one paragraph is much faster.",
+    history_title: "Recent checks",
+    clear_history: "clear",
+    running_title: "Checking",
+    elapsed_label: "Elapsed:",
+    running_note: "You can close the popup — the result will be saved.",
+    error_title: "The check failed",
+    error_hint: "Make sure the backend is running (uvicorn app.main:app) and the address in settings is correct.",
+    retry: "Try again",
+    highlight: "Highlight on page",
+    unhighlight: (n) => `Remove highlight (${n})`,
+    no_matches: "No matches found on the page",
+    copy_md: "Copy MD",
+    copied: "Copied ✓",
+    recheck: "Re-check",
+    another: "Another page",
+    took: (t) => `The check took ${t}`,
+    stage_default: "Checking…",
+    stage_sending: "Sending for analysis…",
+    stage_extract: "Extracting article text…",
+    stage_claims: "Extracting checkable claims…",
+    stage_cached: "Serving a cached result…",
+    stage_claims_done: (n) => `Claims found: ${n}. Searching for sources…`,
+    stage_claim_done: (d, t) => `Checked ${d} of ${t}…`,
+    error_no_text: "Could not read any text on this page",
+    error_no_worker:
+      "The background worker is not responding. Reload the extension: chrome://extensions → the ↻ button on the Veriscope card.",
+    benchmark: (p) => `on benchmark: ${p}%`,
+    md_title_fallback: "News check",
+    md_flags: "Manipulation signals",
+    md_footer: "_Checked by Veriscope — a fact-checking assistant without fake truth percentages._",
+    verdicts: {
+      supported: "Supported",
+      refuted: "Refuted",
+      conflicting: "Conflicting",
+      unverifiable: "Unverifiable",
+    },
+    confidence: {
+      high: "confidence: high",
+      low: "confidence: low",
+    },
+    sourceTypes: {
+      possible_primary: "possible primary source",
+      reprint: "reprint",
+      opinion: "opinion",
+      unknown: "type unknown",
+    },
+  },
 };
 
-const CONFIDENCE_TITLES = {
-  high: "уверенность: высокая",
-  low: "уверенность: низкая",
-};
-
-const SOURCE_TYPE_TITLES = {
-  possible_primary: "возможный первоисточник",
-  reprint: "перепечатка",
-  opinion: "мнение",
-  unknown: "тип не определён",
-};
+const T = I18N[LANG];
 
 const STANCE_ICONS = {
   supports: "✓",
   refutes: "✕",
   not_enough_info: "·",
 };
+
+function stageTextFor(progress) {
+  if (!progress) return T.stage_sending;
+  if (progress.stage === "claims_done") return T.stage_claims_done(progress.total);
+  if (progress.stage === "claim_done") return T.stage_claim_done(progress.done, progress.total);
+  const key = `stage_${progress.stage}`;
+  return typeof T[key] === "string" ? T[key] : T.stage_default;
+}
+
+function applyI18n() {
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    const value = T[element.dataset.i18n];
+    if (typeof value === "string") {
+      element.textContent = value;
+    }
+  }
+}
 
 const views = {
   idle: document.getElementById("idle-view"),
@@ -104,7 +227,7 @@ function renderChips(claims) {
     const dot = document.createElement("span");
     dot.className = "dot";
     dot.style.background = `var(--${label})`;
-    chip.append(dot, `${counts[label]} ${VERDICT_TITLES[label].toLowerCase()}`);
+    chip.append(dot, `${counts[label]} ${T.verdicts[label].toLowerCase()}`);
     summaryChipsEl.append(chip);
   }
 }
@@ -121,7 +244,7 @@ function renderSource(item) {
   link.target = "_blank";
   link.rel = "noopener";
   link.textContent = item.source.domain;
-  const metaParts = [SOURCE_TYPE_TITLES[item.source.source_type] || item.source.source_type];
+  const metaParts = [T.sourceTypes[item.source.source_type] || item.source.source_type];
   if (item.source.published_at) {
     metaParts.push(item.source.published_at.slice(0, 10));
   }
@@ -146,12 +269,12 @@ function renderClaim(verdict) {
   badgeRow.className = "badge-row";
   const badge = document.createElement("span");
   badge.className = `badge ${verdict.label}`;
-  badge.textContent = VERDICT_TITLES[verdict.label] || verdict.label;
+  badge.textContent = T.verdicts[verdict.label] || verdict.label;
   const confidence = document.createElement("span");
   confidence.className = "confidence";
-  const confidenceParts = [CONFIDENCE_TITLES[verdict.confidence] || ""];
+  const confidenceParts = [T.confidence[verdict.confidence] || ""];
   if (typeof verdict.historical_accuracy === "number") {
-    confidenceParts.push(`на бенчмарке: ${Math.round(verdict.historical_accuracy * 100)}%`);
+    confidenceParts.push(T.benchmark(Math.round(verdict.historical_accuracy * 100)));
   }
   confidence.textContent = confidenceParts.filter(Boolean).join(" · ");
   badgeRow.append(badge, confidence);
@@ -165,7 +288,10 @@ function renderClaim(verdict) {
   if (verdict.evidence.length > 0) {
     const details = document.createElement("details");
     const summary = document.createElement("summary");
-    summary.textContent = `Источники (${verdict.evidence.length})`;
+    summary.textContent =
+      LANG === "ru"
+        ? `Источники (${verdict.evidence.length})`
+        : `Sources (${verdict.evidence.length})`;
     details.append(summary);
     for (const item of verdict.evidence) {
       details.append(renderSource(item));
@@ -190,7 +316,7 @@ function renderResult(job) {
   for (const verdict of result.claims) {
     claimsEl.append(renderClaim(verdict));
   }
-  metaEl.textContent = `Проверка заняла ${formatElapsed(job.startedAt, job.finishedAt)}`;
+  metaEl.textContent = T.took(formatElapsed(job.startedAt, job.finishedAt));
   showView("result");
 }
 
@@ -202,7 +328,7 @@ function renderJob(job) {
   }
   if (job.status === "running") {
     runningPageEl.textContent = job.pageTitle ? `: ${job.pageTitle}` : "";
-    stageTextEl.textContent = job.stageText || "Идёт проверка…";
+    stageTextEl.textContent = stageTextFor(job.progress);
     startTimer(job.startedAt);
     showView("running");
     return;
@@ -226,7 +352,7 @@ function formatHistoryMeta(entry) {
   if (entry.counts.conflicting) parts.push(`⚠ ${entry.counts.conflicting}`);
   if (entry.counts.unverifiable) parts.push(`? ${entry.counts.unverifiable}`);
   const date = new Date(entry.time);
-  const stamp = date.toLocaleString("ru-RU", {
+  const stamp = date.toLocaleString(T.locale, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -261,26 +387,26 @@ async function renderHistory() {
 
 function buildMarkdown(result) {
   const lines = [];
-  lines.push(`# ${result.input_title || "Проверка новости"}`);
+  lines.push(`# ${result.input_title || T.md_title_fallback}`);
   lines.push("");
   lines.push(result.summary);
   if (result.flags.length) {
     lines.push("");
-    lines.push("## Признаки манипуляции");
+    lines.push(`## ${T.md_flags}`);
     for (const flag of result.flags) {
       lines.push(`- ${flag.detail}`);
     }
   }
   for (const verdict of result.claims) {
     lines.push("");
-    lines.push(`## ${VERDICT_TITLES[verdict.label] || verdict.label}: ${verdict.claim.text}`);
+    lines.push(`## ${T.verdicts[verdict.label] || verdict.label}: ${verdict.claim.text}`);
     lines.push("");
     lines.push(verdict.explanation);
     if (verdict.evidence.length) {
       lines.push("");
       for (const item of verdict.evidence) {
         const meta = [
-          SOURCE_TYPE_TITLES[item.source.source_type] || item.source.source_type,
+          T.sourceTypes[item.source.source_type] || item.source.source_type,
           item.stance,
         ];
         if (item.source.published_at) {
@@ -291,7 +417,7 @@ function buildMarkdown(result) {
     }
   }
   lines.push("");
-  lines.push("_Проверено Veriscope — ассистентом проверки фактов без фейковых процентов._");
+  lines.push(T.md_footer);
   return lines.join("\n");
 }
 
@@ -369,17 +495,17 @@ async function toggleHighlight(job) {
   const [injection] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: highlightOnPage,
-    args: [claims, VERDICT_TITLES],
+    args: [claims, T.verdicts],
   });
   const outcome = injection.result || {};
   if (outcome.removed) {
-    highlightButton.textContent = "Подсветить на странице";
+    highlightButton.textContent = T.highlight;
   } else if (outcome.highlighted > 0) {
-    highlightButton.textContent = `Снять подсветку (${outcome.highlighted})`;
+    highlightButton.textContent = T.unhighlight(outcome.highlighted);
   } else {
-    highlightButton.textContent = "Совпадений на странице не нашлось";
+    highlightButton.textContent = T.no_matches;
     setTimeout(() => {
-      highlightButton.textContent = "Подсветить на странице";
+      highlightButton.textContent = T.highlight;
     }, 2500);
   }
 }
@@ -412,7 +538,7 @@ async function startCheck(force = false) {
       renderJob({
         status: "error",
         startedAt: Date.now(),
-        message: "На этой странице не удалось прочитать текст",
+        message: T.error_no_text,
       });
       return;
     }
@@ -426,8 +552,7 @@ async function startCheck(force = false) {
       renderJob({
         status: "error",
         startedAt: Date.now(),
-        message:
-          "Фоновый обработчик не отвечает. Перезагрузи расширение: chrome://extensions → кнопка ↻ на карточке Veriscope.",
+        message: T.error_no_worker,
       });
       return;
     }
@@ -467,9 +592,9 @@ copyMdButton.addEventListener("click", async () => {
   const { job } = await chrome.storage.session.get("job");
   if (!job || job.status !== "done") return;
   await navigator.clipboard.writeText(buildMarkdown(job.result));
-  copyMdButton.textContent = "Скопировано ✓";
+  copyMdButton.textContent = T.copied;
   setTimeout(() => {
-    copyMdButton.textContent = "Копировать MD";
+    copyMdButton.textContent = T.copy_md;
   }, 2000);
 });
 
@@ -500,6 +625,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 (async () => {
+  applyI18n();
   const { backendUrl } = await chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND });
   backendInput.value = backendUrl;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

@@ -74,6 +74,7 @@ class ManipulationFlag(BaseModel):
 
 class AnalysisResult(BaseModel):
     input_title: str | None = None
+    language: str = "ru"
     claims: list[ClaimVerdict]
     flags: list[ManipulationFlag]
     summary: str

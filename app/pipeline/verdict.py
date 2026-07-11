@@ -1,3 +1,4 @@
+from app.i18n import strings_for
 from app.schemas import (
     Claim,
     ClaimVerdict,
@@ -8,53 +9,38 @@ from app.schemas import (
     VerdictLabel,
 )
 
-VERDICT_TITLES = {
-    VerdictLabel.supported: "подтверждается",
-    VerdictLabel.refuted: "опровергается",
-    VerdictLabel.conflicting: "источники противоречат друг другу",
-    VerdictLabel.unverifiable: "не удалось проверить",
-}
 
-
-def build_explanation(label: VerdictLabel, supporting: int, refuting: int, total: int) -> str:
-    base = (
-        f"Независимых групп источников: за — {supporting}, против — {refuting} "
-        f"(всего источников: {total})."
+def build_explanation(
+    label: VerdictLabel, supporting: int, refuting: int, total: int, lang: str = "ru"
+) -> str:
+    strings = strings_for(lang)
+    base = strings["explanation_base"].format(
+        supporting=supporting, refuting=refuting, total=total
     )
     if label == VerdictLabel.supported:
         if refuting > 0:
-            tail = (
-                "Перевес независимых источников на стороне подтверждения, "
-                "но есть и опровергающие — уверенность низкая."
-            )
+            tail = strings["supported_contested"]
         elif supporting >= 2:
-            tail = "Утверждение подтверждается несколькими независимыми группами источников."
+            tail = strings["supported_multi"]
         else:
-            tail = (
-                "Подтверждение опирается на единственную независимую группу источников, "
-                "уверенность низкая."
-            )
+            tail = strings["supported_single"]
     elif label == VerdictLabel.refuted:
         if supporting > 0:
-            tail = (
-                "Перевес независимых источников на стороне опровержения, "
-                "но есть и подтверждающие — уверенность низкая."
-            )
+            tail = strings["refuted_contested"]
         elif refuting >= 2:
-            tail = "Утверждение опровергается несколькими независимыми группами источников."
+            tail = strings["refuted_multi"]
         else:
-            tail = (
-                "Опровержение опирается на единственную независимую группу источников, "
-                "уверенность низкая."
-            )
+            tail = strings["refuted_single"]
     elif label == VerdictLabel.conflicting:
-        tail = "Источники расходятся: есть и независимые подтверждения, и опровержения."
+        tail = strings["conflicting_tail"]
     else:
-        tail = "Достаточных доказательств не найдено — честный ответ: проверить не удалось."
+        tail = strings["unverifiable_tail"]
     return f"{base} {tail}"
 
 
-def aggregate_verdict(claim: Claim, evidence: list[EvidenceItem]) -> ClaimVerdict:
+def aggregate_verdict(
+    claim: Claim, evidence: list[EvidenceItem], lang: str = "ru"
+) -> ClaimVerdict:
     supporting = {item.source.cluster_id for item in evidence if item.stance == Stance.supports}
     refuting = {item.source.cluster_id for item in evidence if item.stance == Stance.refutes}
     if supporting and refuting:
@@ -83,21 +69,24 @@ def aggregate_verdict(claim: Claim, evidence: list[EvidenceItem]) -> ClaimVerdic
         independent_supporting=len(supporting),
         independent_refuting=len(refuting),
         evidence=evidence,
-        explanation=build_explanation(label, len(supporting), len(refuting), len(evidence)),
+        explanation=build_explanation(label, len(supporting), len(refuting), len(evidence), lang),
     )
 
 
-def build_summary(verdicts: list[ClaimVerdict], flags: list[ManipulationFlag]) -> str:
+def build_summary(
+    verdicts: list[ClaimVerdict], flags: list[ManipulationFlag], lang: str = "ru"
+) -> str:
+    strings = strings_for(lang)
     if not verdicts:
-        return "Не удалось выделить проверяемые утверждения из текста."
+        return strings["summary_empty"]
     counts: dict[VerdictLabel, int] = {}
     for verdict in verdicts:
         counts[verdict.label] = counts.get(verdict.label, 0) + 1
     parts = [
-        f"{count} — {VERDICT_TITLES[label]}"
+        f"{count} — {strings[f'verdict_{label.value}']}"
         for label, count in counts.items()
     ]
-    summary = f"Проверено утверждений: {len(verdicts)} ({'; '.join(parts)})."
+    summary = strings["summary"].format(count=len(verdicts), parts="; ".join(parts))
     if flags:
-        summary += f" Обнаружено признаков манипуляции: {len(flags)}."
+        summary += strings["summary_flags"].format(count=len(flags))
     return summary

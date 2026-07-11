@@ -14,7 +14,7 @@
       </svg>
       <div>
         <h1>Veriscope</h1>
-        <p>Проверка новостей по независимым источникам</p>
+        <p data-i18n="tagline">Проверка новостей по независимым источникам</p>
       </div>
     </div>
     <button id="settings-toggle" class="icon-button" title="Настройки" aria-label="Настройки">
@@ -25,23 +25,23 @@
   </header>
 
   <section id="settings-panel" hidden>
-    <label for="backend-url">Адрес бэкенда</label>
+    <label for="backend-url" data-i18n="settings_label">Адрес бэкенда</label>
     <div class="settings-row">
       <input id="backend-url" type="url" placeholder="http://localhost:8000">
       <button id="save-settings" type="button">OK</button>
     </div>
-    <p id="settings-note" class="note" hidden>Сохранено</p>
+    <p id="settings-note" class="note" data-i18n="settings_saved" hidden>Сохранено</p>
   </section>
 
   <main>
     <div id="idle-view">
-      <p class="lead">Открой новостную статью и запусти проверку: текст будет разложен на утверждения, каждое проверено по независимым источникам.</p>
-      <button id="check-page" class="primary" type="button">Проверить страницу</button>
-      <p class="note">Совет: выдели фрагмент текста и выбери «Проверить в Veriscope» в контекстном меню — проверка одного абзаца заметно быстрее.</p>
+      <p class="lead" data-i18n="lead">Открой новостную статью и запусти проверку: текст будет разложен на утверждения, каждое проверено по независимым источникам.</p>
+      <button id="check-page" class="primary" type="button" data-i18n="check_page">Проверить страницу</button>
+      <p class="note" data-i18n="tip">Совет: выдели фрагмент текста и выбери «Проверить в Veriscope» в контекстном меню — проверка одного абзаца заметно быстрее.</p>
       <div id="history-block" hidden>
         <div class="history-head">
-          <span>Недавние проверки</span>
-          <button id="clear-history" class="link-button" type="button">очистить</button>
+          <span data-i18n="history_title">Недавние проверки</span>
+          <button id="clear-history" class="link-button" type="button" data-i18n="clear_history">очистить</button>
         </div>
         <div id="history-list"></div>
       </div>
@@ -49,19 +49,19 @@
 
     <div id="running-view" hidden>
       <div class="spinner" aria-hidden="true"></div>
-      <p class="running-title">Идёт проверка<span id="running-page"></span></p>
-      <p class="elapsed">Прошло: <span id="elapsed">0:00</span></p>
-      <p id="stage-text" class="stage-text">Отправляю на проверку…</p>
-      <p class="note">Можно закрыть попап — результат сохранится.</p>
+      <p class="running-title"><span data-i18n="running_title">Идёт проверка</span><span id="running-page"></span></p>
+      <p class="elapsed"><span data-i18n="elapsed_label">Прошло:</span> <span id="elapsed">0:00</span></p>
+      <p id="stage-text" class="stage-text">…</p>
+      <p class="note" data-i18n="running_note">Можно закрыть попап — результат сохранится.</p>
     </div>
 
     <div id="error-view" hidden>
       <div class="error-card">
-        <p class="error-title">Не удалось выполнить проверку</p>
+        <p class="error-title" data-i18n="error_title">Не удалось выполнить проверку</p>
         <p id="error-message" class="note"></p>
-        <p class="note">Проверь, что бэкенд запущен (uvicorn app.main:app) и адрес в настройках верен.</p>
+        <p class="note" data-i18n="error_hint">Проверь, что бэкенд запущен (uvicorn app.main:app) и адрес в настройках верен.</p>
       </div>
-      <button id="retry" class="primary" type="button">Попробовать снова</button>
+      <button id="retry" class="primary" type="button" data-i18n="retry">Попробовать снова</button>
     </div>
 
     <div id="result-view" hidden>
@@ -71,12 +71,12 @@
       <div id="claims"></div>
       <p id="meta" class="note center"></p>
       <div class="actions-row">
-        <button id="highlight" class="ghost" type="button">Подсветить на странице</button>
-        <button id="copy-md" class="ghost" type="button">Копировать MD</button>
+        <button id="highlight" class="ghost" type="button" data-i18n="highlight">Подсветить на странице</button>
+        <button id="copy-md" class="ghost" type="button" data-i18n="copy_md">Копировать MD</button>
       </div>
       <div class="actions-row">
-        <button id="recheck" class="ghost" type="button">Перепроверить заново</button>
-        <button id="again" class="ghost" type="button">Другая страница</button>
+        <button id="recheck" class="ghost" type="button" data-i18n="recheck">Перепроверить заново</button>
+        <button id="again" class="ghost" type="button" data-i18n="another">Другая страница</button>
       </div>
     </div>
   </main>

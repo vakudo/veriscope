@@ -4,13 +4,14 @@ from collections.abc import Awaitable, Callable
 
 from app.cache.store import result_key
 from app.config import Settings
+from app.i18n import detect_language, strings_for
 from app.pipeline.claims import extract_claims
 from app.pipeline.extract import extract_article
 from app.pipeline.independence import mark_independence
 from app.pipeline.manipulation import detect_manipulation
 from app.pipeline.search import SearchProvider, build_queries, domain_of, gather_evidence
 from app.pipeline.similarity import cosine
-from app.pipeline.stance import INHERITED_RATIONALE, UNSTABLE_RATIONALE, detect_stance
+from app.pipeline.stance import detect_stance
 from app.pipeline.verdict import aggregate_verdict, build_summary
 from app.schemas import (
     AnalysisResult,
@@ -74,7 +75,8 @@ class FactCheckPipeline:
                 raise ValueError("no text to analyze")
             extract_done = time.perf_counter()
             exclude_domain = domain_of(url) if url else None
-            flags = detect_manipulation(title, text)
+            lang = detect_language(text)
+            flags = detect_manipulation(title, text, lang)
             await notify({"stage": "claims"})
             claims = await extract_claims(self.llm, text, self.settings.max_claims)
             total = len(claims)
@@ -85,7 +87,7 @@ class FactCheckPipeline:
 
             async def check_and_report(claim: Claim) -> ClaimVerdict:
                 nonlocal done_count
-                verdict = await self._check_claim(claim, exclude_domain)
+                verdict = await self._check_claim(claim, exclude_domain, lang)
                 async with counter_lock:
                     done_count += 1
                     current = done_count
@@ -105,9 +107,10 @@ class FactCheckPipeline:
             finished = time.perf_counter()
             result = AnalysisResult(
                 input_title=title,
+                language=lang,
                 claims=verdicts,
                 flags=flags,
-                summary=build_summary(verdicts, flags),
+                summary=build_summary(verdicts, flags, lang),
                 timings={
                     "extract_s": round(extract_done - started, 1),
                     "claims_s": round(claims_done - extract_done, 1),
@@ -146,7 +149,10 @@ class FactCheckPipeline:
         if article.published_at and not source.published_at:
             source.published_at = article.published_at
 
-    async def _check_claim(self, claim: Claim, exclude_domain: str | None = None) -> ClaimVerdict:
+    async def _check_claim(
+        self, claim: Claim, exclude_domain: str | None = None, lang: str = "ru"
+    ) -> ClaimVerdict:
+        strings = strings_for(lang)
         embedding = None
         if self.cache is not None:
             embedding = (await self.llm.embed([claim.text]))[0]
@@ -154,7 +160,7 @@ class FactCheckPipeline:
             if cached is not None:
                 if exclude_domain:
                     cached = [item for item in cached if item.source.domain != exclude_domain]
-                return aggregate_verdict(claim, cached)
+                return aggregate_verdict(claim, cached, lang)
         queries, translated = await build_queries(
             self.llm, claim.text, self.settings.cross_lingual_search
         )
@@ -209,7 +215,7 @@ class FactCheckPipeline:
                 for item, recheck in zip(contested, rechecks, strict=False):
                     if recheck.stance != item.stance:
                         item.stance = Stance.not_enough_info
-                        item.rationale = UNSTABLE_RATIONALE
+                        item.rationale = strings["unstable"]
         by_cluster = {item.source.cluster_id: item for item in judged}
         evidence = []
         for source in sources:
@@ -221,9 +227,9 @@ class FactCheckPipeline:
                     EvidenceItem(
                         source=source,
                         stance=cluster_item.stance,
-                        rationale=INHERITED_RATIONALE,
+                        rationale=strings["inherited"],
                     )
                 )
         if self.cache is not None and evidence:
             await self.cache.put(claim.text, embedding, evidence)
-        return aggregate_verdict(claim, evidence)
+        return aggregate_verdict(claim, evidence, lang)

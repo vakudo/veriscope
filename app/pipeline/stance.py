@@ -1,3 +1,4 @@
+from app.i18n import STRINGS
 from app.pipeline.json_utils import extract_json_value
 from app.schemas import EvidenceItem, EvidenceSource, Stance
 
@@ -11,9 +12,9 @@ STANCE_SYSTEM = (
 
 STANCE_VALUES = {stance.value for stance in Stance}
 
-INHERITED_RATIONALE = "Перепечатка того же материала — позиция унаследована от группы источников"
+INHERITED_RATIONALE = STRINGS["ru"]["inherited"]
 
-UNSTABLE_RATIONALE = "Позиция источника неустойчива при повторной проверке и не засчитана"
+UNSTABLE_RATIONALE = STRINGS["ru"]["unstable"]
 
 
 async def detect_stance(llm, claim_text: str, source: EvidenceSource) -> EvidenceItem:
