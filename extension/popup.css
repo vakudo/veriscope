@@ -453,3 +453,13 @@ main {
   font-size: 11px;
   margin-top: 1px;
 }
+
+.source .evidence-quote {
+  display: block;
+  margin-top: 3px;
+  padding-left: 7px;
+  border-left: 2px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  font-style: italic;
+}

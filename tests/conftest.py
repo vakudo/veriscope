@@ -20,9 +20,21 @@ class FakeLLM:
             return json.dumps(self.claims)
         if "stance" in system:
             if "STANCE_SUPPORTS" in user:
-                return json.dumps({"stance": "supports", "rationale": "подтверждает"})
+                return json.dumps(
+                    {
+                        "stance": "supports",
+                        "rationale": "подтверждает",
+                        "evidence_quote": "STANCE_SUPPORTS",
+                    }
+                )
             if "STANCE_REFUTES" in user:
-                return json.dumps({"stance": "refutes", "rationale": "опровергает"})
+                return json.dumps(
+                    {
+                        "stance": "refutes",
+                        "rationale": "опровергает",
+                        "evidence_quote": "STANCE_REFUTES",
+                    }
+                )
             return json.dumps({"stance": "not_enough_info", "rationale": ""})
         return "{}"
 

@@ -168,6 +168,9 @@ def format_result(result: AnalysisResult, texts: dict) -> str:
             lines.append(
                 f'• <a href="{html.escape(source.url)}">{html.escape(source.domain)}</a> ({meta})'
             )
+            if item.evidence_quote:
+                quote = item.evidence_quote[:240]
+                lines.append(f"  ↳ <i>“{html.escape(quote)}”</i>")
     text = "\n".join(lines)
     if len(text) > MAX_MESSAGE_LENGTH:
         text = text[:MAX_MESSAGE_LENGTH] + "…"

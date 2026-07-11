@@ -103,6 +103,7 @@ def prediction_from_verdict(verdict: ClaimVerdict) -> dict:
                 "source_type": source.source_type.value,
                 "stance": item.stance.value,
                 "rationale": item.rationale,
+                "evidence_quote": item.evidence_quote,
             }
         )
         if source.cluster_id in seen_clusters:

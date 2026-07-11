@@ -252,6 +252,12 @@ function renderSource(item) {
   meta.className = "meta";
   meta.textContent = ` — ${metaParts.join(", ")}`;
   content.append(link, meta);
+  if (item.evidence_quote) {
+    const quote = document.createElement("span");
+    quote.className = "evidence-quote";
+    quote.textContent = `“${item.evidence_quote}”`;
+    content.append(quote);
+  }
   if (item.rationale) {
     const rationale = document.createElement("span");
     rationale.className = "rationale";

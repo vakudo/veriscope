@@ -163,7 +163,13 @@ async def test_unstable_refutation_downgraded_on_recheck(settings):
                 vectors={"ALPHA": [1.0, 0.0, 0.0], "BETA": [0.0, 1.0, 0.0]},
             )
             self.flaky_answers = [
-                json.dumps({"stance": "refutes", "rationale": "шум"}),
+                json.dumps(
+                    {
+                        "stance": "refutes",
+                        "rationale": "шум",
+                        "evidence_quote": "FLAKY",
+                    }
+                ),
                 json.dumps({"stance": "not_enough_info", "rationale": ""}),
             ]
 

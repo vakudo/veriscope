@@ -54,6 +54,7 @@ class EvidenceItem(BaseModel):
     source: EvidenceSource
     stance: Stance
     rationale: str = ""
+    evidence_quote: str = ""
 
 
 class ClaimVerdict(BaseModel):
