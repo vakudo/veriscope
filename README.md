@@ -143,6 +143,30 @@ Honesty guards built in:
   search can confirm — the latter measure how honestly the system says
   "cannot verify".
 
+Measured on this set (qwen2.5:7b-instruct + nomic-embed-text, CPU, July 2026),
+overall accuracy 83% (62/75):
+
+| Produced verdict | Samples | Accuracy |
+|---|---|---|
+| supported | 26 | 92% |
+| refuted | 19 | 95% |
+| unverifiable | 24 | 83% |
+| conflicting | 6 | 0% |
+
+Notable results:
+
+- **all 20 fabricated stories got "cannot verify"** — the system never
+  confirmed a non-existent event, which is the failure mode that matters most
+  for a fact-checking assistant;
+- **"conflicting" is a known weak spot**: every time the system claimed
+  sources contradict each other, the claim was actually clearly true or
+  clearly false — one noisy stance judgement is enough to flip an otherwise
+  correct verdict. Fixing this (stance fine-tuning, requiring at least two
+  independent refuting groups) is the next planned experiment;
+- errors concentrate in stance detection on borderline snippets, which is the
+  argument for fine-tuning the stance component on FEVER (see evaluation
+  plan).
+
 ## Evaluation plan
 
 - **AVeriTeC** — primary benchmark: real-world claims with web evidence and
