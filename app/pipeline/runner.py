@@ -111,7 +111,14 @@ class FactCheckPipeline:
             lang = detect_language(text)
             flags = detect_manipulation(title, text, lang)
             await notify({"stage": "claims"})
-            claims = await extract_claims(self.llm, text, self.settings.max_claims)
+            claims = await extract_claims(
+                self.llm,
+                text,
+                max_claims=self.settings.max_claims,
+                chunk_chars=self.settings.claim_chunk_chars,
+                chunk_overlap=self.settings.claim_chunk_overlap,
+                max_chunks=self.settings.claim_max_chunks,
+            )
             total = len(claims)
             await notify({"stage": "claims_done", "total": total})
             claims_done = time.perf_counter()

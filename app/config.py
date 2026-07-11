@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     cache_similarity_threshold: float = 0.95
     min_relevance: float = 0.55
     max_claims: int = 3
+    claim_chunk_chars: int = 3500
+    claim_chunk_overlap: int = 300
+    claim_max_chunks: int = 8
     cross_lingual_search: bool = True
     verify_conflicts: bool = True
     deep_evidence: bool = True

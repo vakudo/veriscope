@@ -13,6 +13,8 @@ percentage is worse than no score at all — it creates an illusion of precision
 Veriscope instead makes the verification process transparent:
 
 - splits the story into atomic, independently checkable claims;
+- scans long articles in overlapping chunks sampled across the full document,
+  then deduplicates and selects claims round-robin so the ending is not ignored;
 - searches evidence per claim and shows sources with dates and types
   (possible primary source / reprint / opinion);
 - classifies the stance of every (claim, source) pair:
