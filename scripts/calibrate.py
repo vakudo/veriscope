@@ -8,7 +8,6 @@ from app.config import get_settings
 from app.llm import LLMClient
 from app.pipeline.runner import FactCheckPipeline
 from app.pipeline.search import DdgsSearch
-from app.schemas import Claim
 
 
 async def run() -> None:
@@ -33,7 +32,7 @@ async def run() -> None:
     rows = [json.loads(line) for line in lines if line]
     correct_total = 0
     for index, row in enumerate(rows):
-        verdict = await pipeline._check_claim(Claim(id=index, text=row["claim"]))
+        verdict = await pipeline.verify_claim(row["claim"], claim_id=index)
         label = verdict.label.value
         bucket = stats.setdefault(label, {"correct": 0, "total": 0})
         bucket["total"] += 1
