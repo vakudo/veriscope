@@ -1,6 +1,8 @@
 import asyncio
 import html
+import json
 import re
+import time
 
 import httpx
 from aiogram import Bot, Dispatcher, F
@@ -42,9 +44,53 @@ START_TEXT = (
     "Я не выдаю «процент правдивости»: если данных нет, я честно скажу об этом."
 )
 
+STAGE_TEXTS = {
+    "extract": "Извлекаю текст статьи…",
+    "claims": "Выделяю проверяемые утверждения…",
+    "cached": "Беру готовый результат из кэша…",
+}
+
 MAX_MESSAGE_LENGTH = 4000
+MIN_EDIT_INTERVAL = 3.0
 
 dp = Dispatcher()
+
+
+def stage_text(event: dict) -> str:
+    if event.get("stage") == "claims_done":
+        return f"Найдено утверждений: {event.get('total')}. Ищу источники…"
+    if event.get("stage") == "claim_done":
+        return f"Проверено {event.get('done')} из {event.get('total')}…"
+    return STAGE_TEXTS.get(event.get("stage"), "Идёт проверка…")
+
+
+async def analyze_with_progress(settings, payload: dict, status: Message) -> AnalysisResult:
+    last_edit = 0.0
+    last_text = ""
+    async with httpx.AsyncClient(timeout=settings.request_timeout * 3) as client:
+        async with client.stream(
+            "POST", f"{settings.backend_url}/api/analyze/stream", json=payload
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                event = json.loads(line[6:])
+                stage = event.get("stage")
+                if stage == "done":
+                    return AnalysisResult.model_validate(event["result"])
+                if stage == "error":
+                    raise RuntimeError(event.get("detail", "backend error"))
+                text = stage_text(event)
+                now = time.monotonic()
+                if text != last_text and now - last_edit >= MIN_EDIT_INTERVAL:
+                    try:
+                        await status.edit_text(text)
+                        last_text = text
+                        last_edit = now
+                    except Exception:
+                        pass
+    raise RuntimeError("stream ended without result")
 
 
 def format_result(result: AnalysisResult) -> str:
@@ -59,11 +105,16 @@ def format_result(result: AnalysisResult) -> str:
             lines.append(f"❗ {html.escape(flag.detail)}")
     for verdict in result.claims:
         lines.append("")
-        lines.append(
-            f"{VERDICT_EMOJI[verdict.label]} <b>{VERDICT_TITLES[verdict.label]}:</b> "
-            f"{html.escape(verdict.claim.text)}"
-        )
-        lines.append(html.escape(verdict.explanation))
+        header = f"{VERDICT_EMOJI[verdict.label]} <b>{VERDICT_TITLES[verdict.label]}:</b> "
+        header += html.escape(verdict.claim.text)
+        lines.append(header)
+        explanation = verdict.explanation
+        if verdict.historical_accuracy is not None:
+            explanation += (
+                f" Исторически такие вердикты верны в "
+                f"{round(verdict.historical_accuracy * 100)}% случаев."
+            )
+        lines.append(html.escape(explanation))
         for item in verdict.evidence[:3]:
             source = item.source
             meta = SOURCE_TYPE_TITLES[source.source_type]
@@ -88,12 +139,9 @@ async def handle_text(message: Message) -> None:
     settings = get_settings()
     match = URL_PATTERN.search(message.text or "")
     payload = {"url": match.group(0)} if match else {"text": message.text}
-    status = await message.answer("Проверяю, это может занять пару минут…")
+    status = await message.answer("Отправляю на проверку…")
     try:
-        async with httpx.AsyncClient(timeout=settings.request_timeout * 3) as client:
-            response = await client.post(f"{settings.backend_url}/api/analyze", json=payload)
-        response.raise_for_status()
-        result = AnalysisResult.model_validate(response.json())
+        result = await analyze_with_progress(settings, payload, status)
         await status.edit_text(format_result(result), disable_web_page_preview=True)
     except Exception:
         await status.edit_text(
