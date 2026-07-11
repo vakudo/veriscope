@@ -1,7 +1,10 @@
+import json
+
 from app.cache.store import MemoryResultCache
+from app.pipeline.extract import Article
 from app.pipeline.runner import FactCheckPipeline
 from app.pipeline.search import SearchResult
-from app.pipeline.stance import INHERITED_RATIONALE
+from app.pipeline.stance import INHERITED_RATIONALE, UNSTABLE_RATIONALE
 from app.schemas import Stance, VerdictLabel
 from tests.conftest import FakeLLM, FakeSearch
 
@@ -151,6 +154,90 @@ async def test_calibration_attached_to_verdicts(settings):
     assert result.claims[0].historical_accuracy == 0.8
 
 
+async def test_unstable_refutation_downgraded_on_recheck(settings):
+    class FlakyLLM(FakeLLM):
+        def __init__(self):
+            super().__init__(
+                claims=["Компания Альфа купила компанию Бета"],
+                vectors={"ALPHA": [1.0, 0.0, 0.0], "BETA": [0.0, 1.0, 0.0]},
+            )
+            self.flaky_answers = [
+                json.dumps({"stance": "refutes", "rationale": "шум"}),
+                json.dumps({"stance": "not_enough_info", "rationale": ""}),
+            ]
+
+        async def chat(self, system: str, user: str, **kwargs) -> str:
+            if "stance" in system and "FLAKY" in user:
+                self.chat_calls.append((system, user))
+                return self.flaky_answers.pop(0)
+            return await super().chat(system, user, **kwargs)
+
+    llm = FlakyLLM()
+    search = FakeSearch(
+        default=[
+            SearchResult(
+                url="https://one.example/news/1",
+                title="",
+                snippet="ALPHA STANCE_SUPPORTS",
+                published_at="2026-03-05",
+            ),
+            SearchResult(
+                url="https://two.example/news/2",
+                title="",
+                snippet="BETA FLAKY",
+                published_at="2026-03-06",
+            ),
+        ]
+    )
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+    result = await pipeline.analyze(text=TEXT)
+    verdict = result.claims[0]
+    assert verdict.label == VerdictLabel.supported
+    assert verdict.independent_refuting == 0
+    downgraded = [item for item in verdict.evidence if item.rationale == UNSTABLE_RATIONALE]
+    assert len(downgraded) == 1
+    assert downgraded[0].stance == Stance.not_enough_info
+
+
+async def test_deep_evidence_replaces_snippet_with_best_paragraph(settings, monkeypatch):
+    settings.deep_evidence = True
+    llm = FakeLLM(
+        claims=["Компания ALPHA купила компанию Бета"],
+        vectors={"ALPHA": [1.0, 0.0, 0.0], "OFFTOPIC": [0.0, 1.0, 0.0]},
+    )
+    relevant = "ALPHA " + "подробности сделки компании Альфа и Бета " * 3
+    offtopic = "OFFTOPIC " + "реклама подписки на наш замечательный журнал " * 3
+    article = Article(text=f"{offtopic}\n{relevant}", published_at="2026-03-01")
+
+    async def fake_extract(url):
+        return article
+
+    monkeypatch.setattr("app.pipeline.runner.extract_article", fake_extract)
+    search = FakeSearch(
+        default=[
+            SearchResult(
+                url="https://one.example/news/1",
+                title="",
+                snippet="ALPHA STANCE_SUPPORTS короткий сниппет",
+            )
+        ]
+    )
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+    result = await pipeline.analyze(text=TEXT)
+    source = result.claims[0].evidence[0].source
+    assert source.snippet.startswith("ALPHA подробности")
+    assert "OFFTOPIC" not in source.snippet.split(" … ")[0]
+    assert source.published_at == "2026-03-01"
+
+
+async def test_timings_reported(settings):
+    llm, search = make_setup()
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+    result = await pipeline.analyze(text=TEXT)
+    assert result.timings is not None
+    assert set(result.timings) == {"extract_s", "claims_s", "verify_s", "total_s"}
+
+
 async def test_independent_clusters_judged_separately(settings):
     llm = FakeLLM(
         claims=["Компания Альфа купила компанию Бета"],
@@ -177,5 +264,5 @@ async def test_independent_clusters_judged_separately(settings):
         text="5 марта 2026 года компания Альфа объявила о покупке компании Бета, сообщил Иван Петров."
     )
     verdict = result.claims[0]
-    assert stance_calls(llm) == 2
+    assert stance_calls(llm) == 4
     assert verdict.label == VerdictLabel.conflicting

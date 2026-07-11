@@ -77,3 +77,4 @@ class AnalysisResult(BaseModel):
     claims: list[ClaimVerdict]
     flags: list[ManipulationFlag]
     summary: str
+    timings: dict[str, float] | None = None

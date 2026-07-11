@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     min_relevance: float = 0.55
     max_claims: int = 3
     cross_lingual_search: bool = True
+    verify_conflicts: bool = True
+    deep_evidence: bool = True
+    article_fetch_timeout: float = 12.0
+    max_concurrent_analyses: int = 1
     result_cache_ttl_seconds: float = 21600.0
     calibration_path: str = "calibration.json"
     calibration_min_samples: int = 20

@@ -75,4 +75,5 @@ def settings() -> Settings:
         duplicate_threshold=0.9,
         min_relevance=0.0,
         max_claims=6,
+        deep_evidence=False,
     )

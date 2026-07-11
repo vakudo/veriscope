@@ -13,12 +13,14 @@ STANCE_VALUES = {stance.value for stance in Stance}
 
 INHERITED_RATIONALE = "Перепечатка того же материала — позиция унаследована от группы источников"
 
+UNSTABLE_RATIONALE = "Позиция источника неустойчива при повторной проверке и не засчитана"
+
 
 async def detect_stance(llm, claim_text: str, source: EvidenceSource) -> EvidenceItem:
     user = (
         f"CLAIM:\n{claim_text}\n\n"
         f"SOURCE TITLE:\n{source.title}\n\n"
-        f"SOURCE EXCERPT:\n{source.snippet[:800]}"
+        f"SOURCE EXCERPT:\n{source.snippet[:1200]}"
     )
     stance = Stance.not_enough_info
     rationale = ""
