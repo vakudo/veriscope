@@ -206,6 +206,28 @@ benchmark for the whole system.
   training data: they are small and their labels carry the bias of specific
   fact-checking agencies.
 
+### Reproducible AVeriTeC evaluation
+
+Veriscope includes a benchmark harness that runs normalized AVeriTeC claims
+through the real retrieval and verdict pipeline. It writes predictions compatible
+with the official evaluator plus a standalone report with accuracy, macro-F1,
+per-label precision/recall/F1, abstention metrics and a confusion matrix.
+
+Download AVeriTeC separately and keep its dataset outside this repository. The
+official data is licensed CC BY-NC 4.0 and is intentionally not redistributed here.
+
+```bash
+git clone --depth 1 https://github.com/MichSchli/AVeriTeC.git ../AVeriTeC
+python -m scripts.evaluate_averitec ../AVeriTeC/data/dev.json --limit 20
+```
+
+Results are checkpointed after every claim under `artifacts/averitec/`. Continue
+an interrupted matching run with `--resume`. Omit `--limit` for the complete dev
+split. The harness excludes the target fact-check publisher domain from retrieval
+to reduce answer leakage and disables cross-claim caching so results do not depend
+on evaluation order. Temporal filtering is not implemented yet and must be reported
+as a limitation of current benchmark runs.
+
 ## A note on bias
 
 Fact-checking labels — especially for Russian-language news — are politically

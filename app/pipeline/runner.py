@@ -44,6 +44,23 @@ class FactCheckPipeline:
         self.calibration = calibration or {}
         self._semaphore = asyncio.Semaphore(max(1, settings.max_concurrent_analyses))
 
+    async def verify_claim(
+        self,
+        claim_text: str,
+        claim_id: int = 0,
+        exclude_domain: str | None = None,
+        lang: str | None = None,
+    ) -> ClaimVerdict:
+        """Verify one already-normalized claim without extracting claims from an article."""
+        resolved_text = claim_text.strip()
+        if not resolved_text:
+            raise ValueError("claim text is required")
+        return await self._check_claim(
+            Claim(id=claim_id, text=resolved_text),
+            exclude_domain=exclude_domain,
+            lang=lang or detect_language(resolved_text),
+        )
+
     async def analyze(
         self,
         text: str | None = None,

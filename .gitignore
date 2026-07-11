@@ -8,3 +8,4 @@ venv/
 dist/
 *.egg-info/
 calibration.json
+artifacts/
