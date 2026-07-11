@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -12,6 +13,7 @@ from app.evaluation.averitec import (
     load_references,
     prediction_from_verdict,
     select_references,
+    stratified_indices,
 )
 from app.llm import LLMClient
 from app.pipeline.runner import FactCheckPipeline
@@ -26,6 +28,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="artifacts/averitec")
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--limit", type=int)
+    parser.add_argument(
+        "--sample-per-label",
+        type=int,
+        help="Select this many deterministic examples from each of the four labels",
+    )
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sleep", type=float, default=1.0, help="Delay between web searches")
     parser.add_argument("--resume", action="store_true", help="Continue a matching partial run")
     return parser.parse_args()
@@ -50,15 +58,67 @@ def resumed_predictions(path: Path, references: list[dict], resume: bool) -> lis
     return payload
 
 
+def build_selection(args: argparse.Namespace, all_references: list[dict]) -> tuple[list[dict], list[int]]:
+    if args.sample_per_label is not None:
+        if args.offset or args.limit is not None:
+            raise ValueError("--sample-per-label cannot be combined with --offset or --limit")
+        indices = stratified_indices(all_references, args.sample_per_label, args.seed)
+        return [all_references[index] for index in indices], indices
+    references = select_references(all_references, args.offset, args.limit)
+    return references, list(range(args.offset, args.offset + len(references)))
+
+
+def selection_manifest(
+    dataset_path: Path,
+    references: list[dict],
+    indices: list[int],
+    args: argparse.Namespace,
+) -> dict:
+    digest = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
+    return {
+        "dataset_file": dataset_path.name,
+        "dataset_sha256": digest,
+        "selection": {
+            "offset": args.offset if args.sample_per_label is None else None,
+            "limit": args.limit if args.sample_per_label is None else None,
+            "samples_per_label": args.sample_per_label,
+            "seed": args.seed if args.sample_per_label is not None else None,
+        },
+        "examples": [
+            {
+                "dataset_index": index,
+                "claim": reference["claim"],
+                "label": reference["label"],
+                "claim_date": reference.get("claim_date"),
+            }
+            for index, reference in zip(indices, references, strict=True)
+        ],
+    }
+
+
+def ensure_manifest(path: Path, manifest: dict, resume: bool) -> None:
+    if resume and path.exists():
+        existing = json.loads(path.read_text(encoding="utf-8"))
+        if existing != manifest:
+            raise ValueError("existing manifest does not match this dataset and selection")
+        return
+    write_json(path, manifest)
+
+
 async def run() -> None:
     args = parse_args()
     if args.sleep < 0:
         raise ValueError("sleep must be non-negative")
-    references = select_references(load_references(args.dataset), args.offset, args.limit)
+    dataset_path = Path(args.dataset)
+    references, indices = build_selection(args, load_references(dataset_path))
     output_dir = Path(args.output_dir)
     prediction_path = output_dir / "predictions.json"
     metrics_path = output_dir / "metrics.json"
+    manifest = selection_manifest(dataset_path, references, indices, args)
+    ensure_manifest(output_dir / "manifest.json", manifest, args.resume)
     predictions = resumed_predictions(prediction_path, references, args.resume)
+    if not args.resume:
+        write_json(prediction_path, predictions)
 
     settings = get_settings()
     llm = LLMClient(
@@ -80,7 +140,7 @@ async def run() -> None:
             reference = references[index]
             verdict = await pipeline.verify_claim(
                 reference["claim"],
-                claim_id=args.offset + index,
+                claim_id=indices[index],
                 exclude_domain=fact_check_domain(reference),
                 lang="en",
                 published_before=claim_date(reference),
@@ -103,10 +163,13 @@ async def run() -> None:
     metrics = classification_metrics(predictions, references)
     metrics["run"] = {
         "dataset": str(Path(args.dataset).resolve()),
-        "offset": args.offset,
-        "limit": args.limit,
+        "dataset_sha256": manifest["dataset_sha256"],
+        "selection": manifest["selection"],
         "llm_model": settings.llm_model,
         "embed_model": settings.embed_model,
+        "search_provider": "DuckDuckGo",
+        "deep_evidence": settings.deep_evidence,
+        "verify_conflicts": settings.verify_conflicts,
         "elapsed_seconds": round(time.perf_counter() - started, 1),
         "temporal_filtering": "exclude known source dates after claim_date",
     }

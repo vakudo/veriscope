@@ -221,7 +221,18 @@ git clone --depth 1 https://github.com/MichSchli/AVeriTeC.git ../AVeriTeC
 python -m scripts.evaluate_averitec ../AVeriTeC/data/dev.json --limit 20
 ```
 
-Results are checkpointed after every claim under `artifacts/averitec/`. Continue
+For a deterministic balanced baseline across all four labels, use:
+
+```bash
+python -m scripts.evaluate_averitec ../AVeriTeC/data/dev.json \
+  --sample-per-label 5 --seed 42 --output-dir artifacts/averitec-baseline-20
+```
+
+The first exploratory balanced run and its limitations are documented in
+[`docs/evaluation/averitec-baseline-20.md`](docs/evaluation/averitec-baseline-20.md).
+
+Results and a selection manifest containing the dataset SHA-256 and original row
+indices are checkpointed under `artifacts/averitec/`. Continue
 an interrupted matching run with `--resume`. Omit `--limit` for the complete dev
 split. The harness excludes the target fact-check publisher domain from retrieval
 to reduce answer leakage and disables cross-claim caching so results do not depend

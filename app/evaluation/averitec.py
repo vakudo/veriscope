@@ -1,4 +1,5 @@
 import json
+import random
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
@@ -49,6 +50,23 @@ def select_references(
     return list(references[offset:end])
 
 
+def stratified_indices(
+    references: Sequence[dict], samples_per_label: int, seed: int = 42
+) -> list[int]:
+    if samples_per_label < 1:
+        raise ValueError("samples_per_label must be positive")
+    randomizer = random.Random(seed)
+    selected = []
+    for label in AVERITEC_LABELS:
+        candidates = [index for index, row in enumerate(references) if row.get("label") == label]
+        if len(candidates) < samples_per_label:
+            raise ValueError(
+                f"not enough {label!r} examples: requested {samples_per_label}, found {len(candidates)}"
+            )
+        selected.extend(randomizer.sample(candidates, samples_per_label))
+    return sorted(selected)
+
+
 def fact_check_domain(reference: dict) -> str | None:
     """Return the fact-check publisher domain, including from an archive.org URL."""
     raw = reference.get("fact_checking_article")
@@ -80,6 +98,7 @@ def prediction_from_verdict(verdict: ClaimVerdict) -> dict:
                 "title": source.title,
                 "snippet": source.snippet,
                 "domain": source.domain,
+                "published_at": source.published_at,
                 "cluster_id": source.cluster_id,
                 "source_type": source.source_type.value,
                 "stance": item.stance.value,

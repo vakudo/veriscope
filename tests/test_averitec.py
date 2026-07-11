@@ -10,6 +10,7 @@ from app.evaluation.averitec import (
     load_references,
     prediction_from_verdict,
     select_references,
+    stratified_indices,
 )
 from app.schemas import (
     Claim,
@@ -43,6 +44,31 @@ def test_load_references_rejects_unknown_label(tmp_path):
         load_references(path)
 
 
+def test_stratified_indices_are_balanced_deterministic_and_sorted():
+    rows = [
+        reference(f"{label} {index}", label)
+        for label in AVERITEC_LABELS
+        for index in range(5)
+    ]
+
+    first = stratified_indices(rows, samples_per_label=2, seed=7)
+    second = stratified_indices(rows, samples_per_label=2, seed=7)
+
+    assert first == second
+    assert first == sorted(first)
+    assert len(first) == 8
+    assert {label: sum(rows[index]["label"] == label for index in first) for label in AVERITEC_LABELS} == {
+        label: 2 for label in AVERITEC_LABELS
+    }
+
+
+def test_stratified_indices_reject_insufficient_label_bucket():
+    rows = [reference(label, label) for label in AVERITEC_LABELS]
+
+    with pytest.raises(ValueError, match="not enough"):
+        stratified_indices(rows, samples_per_label=2)
+
+
 def test_fact_check_domain_unwraps_archive_url():
     row = {
         "fact_checking_article": (
@@ -65,6 +91,7 @@ def test_prediction_contains_official_label_and_one_string_per_cluster():
         domain="one.example",
         title="First",
         snippet="Evidence",
+        published_at="2020-10-30",
         source_type=SourceType.possible_primary,
         cluster_id=0,
     )
@@ -94,6 +121,7 @@ def test_prediction_contains_official_label_and_one_string_per_cluster():
     assert prediction["label"] == "Supported"
     assert prediction["string_evidence"] == ["First Evidence"]
     assert len(prediction["veriscope"]["evidence"]) == 2
+    assert prediction["veriscope"]["evidence"][0]["published_at"] == "2020-10-30"
 
 
 def test_prediction_has_scorable_placeholder_when_no_evidence_exists():
