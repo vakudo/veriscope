@@ -225,8 +225,10 @@ Results are checkpointed after every claim under `artifacts/averitec/`. Continue
 an interrupted matching run with `--resume`. Omit `--limit` for the complete dev
 split. The harness excludes the target fact-check publisher domain from retrieval
 to reduce answer leakage and disables cross-claim caching so results do not depend
-on evaluation order. Temporal filtering is not implemented yet and must be reported
-as a limitation of current benchmark runs.
+on evaluation order. Sources with a known publication date after the AVeriTeC claim
+date are excluded both after search and after full-page extraction. Sources with no
+recoverable date remain eligible and must be reported as a limitation of benchmark
+runs.
 
 ## A note on bias
 

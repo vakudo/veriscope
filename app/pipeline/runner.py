@@ -1,6 +1,7 @@
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from datetime import date
 
 from app.cache.store import result_key
 from app.config import Settings
@@ -9,7 +10,13 @@ from app.pipeline.claims import extract_claims
 from app.pipeline.extract import extract_article
 from app.pipeline.independence import mark_independence
 from app.pipeline.manipulation import detect_manipulation
-from app.pipeline.search import SearchProvider, build_queries, domain_of, gather_evidence
+from app.pipeline.search import (
+    SearchProvider,
+    build_queries,
+    domain_of,
+    gather_evidence,
+    published_after,
+)
 from app.pipeline.similarity import cosine
 from app.pipeline.stance import detect_stance
 from app.pipeline.verdict import aggregate_verdict, build_summary
@@ -50,6 +57,7 @@ class FactCheckPipeline:
         claim_id: int = 0,
         exclude_domain: str | None = None,
         lang: str | None = None,
+        published_before: date | None = None,
     ) -> ClaimVerdict:
         """Verify one already-normalized claim without extracting claims from an article."""
         resolved_text = claim_text.strip()
@@ -59,6 +67,7 @@ class FactCheckPipeline:
             Claim(id=claim_id, text=resolved_text),
             exclude_domain=exclude_domain,
             lang=lang or detect_language(resolved_text),
+            published_before=published_before,
         )
 
     async def analyze(
@@ -167,11 +176,16 @@ class FactCheckPipeline:
             source.published_at = article.published_at
 
     async def _check_claim(
-        self, claim: Claim, exclude_domain: str | None = None, lang: str = "ru"
+        self,
+        claim: Claim,
+        exclude_domain: str | None = None,
+        lang: str = "ru",
+        published_before: date | None = None,
     ) -> ClaimVerdict:
         strings = strings_for(lang)
         embedding = None
-        if self.cache is not None:
+        use_cache = self.cache is not None and published_before is None
+        if use_cache:
             embedding = (await self.llm.embed([claim.text]))[0]
             cached = await self.cache.get(claim.text, embedding)
             if cached is not None:
@@ -182,15 +196,16 @@ class FactCheckPipeline:
             self.llm, claim.text, self.settings.cross_lingual_search
         )
         sources = await gather_evidence(
-            self.llm,
-            self.search,
-            claim.text,
-            self.settings.search_max_results,
-            self.settings.evidence_top_k,
-            self.settings.min_relevance,
-            exclude_domain,
-            queries,
-            translated,
+            llm=self.llm,
+            search=self.search,
+            claim_text=claim.text,
+            max_results=self.settings.search_max_results,
+            top_k=self.settings.evidence_top_k,
+            min_relevance=self.settings.min_relevance,
+            exclude_domain=exclude_domain,
+            queries=queries,
+            alt_claim_text=translated,
+            published_before=published_before,
         )
         sources = await mark_independence(self.llm, sources, self.settings.duplicate_threshold)
         representatives: dict[int, EvidenceSource] = {}
@@ -208,6 +223,19 @@ class FactCheckPipeline:
                     for representative in representatives.values()
                 )
             )
+        if published_before:
+            future_clusters = {
+                cluster_id
+                for cluster_id, representative in representatives.items()
+                if published_after(representative.published_at, published_before)
+            }
+            if future_clusters:
+                sources = [source for source in sources if source.cluster_id not in future_clusters]
+                representatives = {
+                    cluster_id: representative
+                    for cluster_id, representative in representatives.items()
+                    if cluster_id not in future_clusters
+                }
         judged = list(
             await asyncio.gather(
                 *(
@@ -247,6 +275,6 @@ class FactCheckPipeline:
                         rationale=strings["inherited"],
                     )
                 )
-        if self.cache is not None and evidence:
+        if use_cache and evidence:
             await self.cache.put(claim.text, embedding, evidence)
         return aggregate_verdict(claim, evidence, lang)

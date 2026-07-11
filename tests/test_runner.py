@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 from app.cache.store import MemoryResultCache
 from app.pipeline.extract import Article
@@ -266,3 +267,55 @@ async def test_independent_clusters_judged_separately(settings):
     verdict = result.claims[0]
     assert stance_calls(llm) == 4
     assert verdict.label == VerdictLabel.conflicting
+
+
+async def test_historical_verification_drops_future_date_found_during_deep_fetch(
+    settings, monkeypatch
+):
+    settings.deep_evidence = True
+    llm = FakeLLM(vectors={"ALPHA": [1.0, 0.0, 0.0]})
+    article = Article(
+        text="ALPHA evidence paragraph " + "with enough detail to be extracted safely " * 4,
+        published_at="2020-11-01",
+    )
+
+    async def fake_extract(url):
+        return article
+
+    monkeypatch.setattr("app.pipeline.runner.extract_article", fake_extract)
+    search = FakeSearch(
+        default=[
+            SearchResult(
+                url="https://future.example/story",
+                title="",
+                snippet="ALPHA STANCE_SUPPORTS",
+            )
+        ]
+    )
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=None, settings=settings)
+
+    verdict = await pipeline.verify_claim(
+        "ALPHA historical claim", lang="en", published_before=date(2020, 10, 31)
+    )
+
+    assert verdict.label == VerdictLabel.unverifiable
+    assert verdict.evidence == []
+    assert stance_calls(llm) == 0
+
+
+async def test_historical_verification_does_not_read_or_write_evidence_cache(settings):
+    class ForbiddenCache:
+        async def get(self, claim_text, embedding=None):
+            raise AssertionError("historical verification must not read the cache")
+
+        async def put(self, claim_text, embedding, evidence):
+            raise AssertionError("historical verification must not write the cache")
+
+    llm, search = make_setup()
+    pipeline = FactCheckPipeline(llm=llm, search=search, cache=ForbiddenCache(), settings=settings)
+
+    verdict = await pipeline.verify_claim(
+        "ALPHA historical claim", lang="en", published_before=date(2026, 3, 5)
+    )
+
+    assert verdict.label == VerdictLabel.supported

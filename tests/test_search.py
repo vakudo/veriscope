@@ -1,4 +1,13 @@
-from app.pipeline.search import SearchResult, build_queries, domain_of, gather_evidence
+from datetime import date
+
+from app.pipeline.search import (
+    SearchResult,
+    build_queries,
+    domain_of,
+    gather_evidence,
+    parse_publication_date,
+    published_after,
+)
 from tests.conftest import FakeLLM, FakeSearch
 
 
@@ -105,3 +114,53 @@ async def test_query_truncated_to_first_words():
 def test_domain_of_strips_www():
     assert domain_of("https://www.example.com/news/1") == "example.com"
     assert domain_of("https://sub.example.com/x") == "sub.example.com"
+
+
+def test_publication_date_parses_dataset_iso_and_http_formats():
+    assert parse_publication_date("31-10-2020") == date(2020, 10, 31)
+    assert parse_publication_date("2020-10-31T12:30:00Z") == date(2020, 10, 31)
+    assert parse_publication_date("Sat, 31 Oct 2020 12:30:00 GMT") == date(2020, 10, 31)
+    assert parse_publication_date("unknown") is None
+
+
+def test_publication_on_cutoff_is_allowed_but_future_is_not():
+    cutoff = date(2020, 10, 31)
+    assert not published_after("2020-10-31", cutoff)
+    assert published_after("2020-11-01", cutoff)
+    assert not published_after(None, cutoff)
+
+
+async def test_gather_evidence_excludes_known_future_sources_but_keeps_unknown_dates():
+    llm = FakeLLM(vectors={"ALPHA": [1.0, 0.0, 0.0]})
+    search = FakeSearch(
+        default=[
+            SearchResult(
+                url="https://past.example/story",
+                title="",
+                snippet="ALPHA past",
+                published_at="2020-10-30",
+            ),
+            SearchResult(
+                url="https://future.example/story",
+                title="",
+                snippet="ALPHA future",
+                published_at="2020-11-01",
+            ),
+            SearchResult(
+                url="https://unknown.example/story",
+                title="",
+                snippet="ALPHA unknown",
+            ),
+        ]
+    )
+
+    sources = await gather_evidence(
+        llm,
+        search,
+        "ALPHA claim",
+        max_results=8,
+        top_k=4,
+        published_before=date(2020, 10, 31),
+    )
+
+    assert {source.domain for source in sources} == {"past.example", "unknown.example"}

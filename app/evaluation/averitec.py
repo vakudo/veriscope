@@ -1,8 +1,10 @@
 import json
 from collections.abc import Sequence
+from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
+from app.pipeline.search import parse_publication_date
 from app.schemas import ClaimVerdict, VerdictLabel
 
 AVERITEC_LABELS = (
@@ -59,6 +61,11 @@ def fact_check_domain(reference: dict) -> str | None:
         if position >= 0:
             host = urlparse(parsed.path[position + 1 :]).netloc.lower()
     return host.removeprefix("www.") or None
+
+
+def claim_date(reference: dict) -> date | None:
+    value = reference.get("claim_date")
+    return parse_publication_date(value) if isinstance(value, str) else None
 
 
 def prediction_from_verdict(verdict: ClaimVerdict) -> dict:

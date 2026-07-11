@@ -4,6 +4,7 @@ import pytest
 
 from app.evaluation.averitec import (
     AVERITEC_LABELS,
+    claim_date,
     classification_metrics,
     fact_check_domain,
     load_references,
@@ -51,6 +52,11 @@ def test_fact_check_domain_unwraps_archive_url():
     }
 
     assert fact_check_domain(row) == "example.com"
+
+
+def test_claim_date_parses_averitec_format():
+    assert claim_date({"claim_date": "31-10-2020"}).isoformat() == "2020-10-31"
+    assert claim_date({}) is None
 
 
 def test_prediction_contains_official_label_and_one_string_per_cluster():

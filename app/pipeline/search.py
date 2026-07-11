@@ -1,6 +1,8 @@
 import asyncio
 import re
 from dataclasses import dataclass
+from datetime import date, datetime
+from email.utils import parsedate_to_datetime
 from typing import Protocol
 from urllib.parse import urlparse
 
@@ -27,6 +29,30 @@ class SearchResult:
 
 class SearchProvider(Protocol):
     async def search(self, query: str, max_results: int) -> list[SearchResult]: ...
+
+
+def parse_publication_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    candidate = value.strip()
+    try:
+        return datetime.fromisoformat(candidate.replace("Z", "+00:00")).date()
+    except ValueError:
+        pass
+    for pattern in ("%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(candidate, pattern).date()
+        except ValueError:
+            pass
+    try:
+        return parsedate_to_datetime(candidate).date()
+    except (TypeError, ValueError):
+        return None
+
+
+def published_after(value: str | None, cutoff: date | None) -> bool:
+    parsed = parse_publication_date(value)
+    return cutoff is not None and parsed is not None and parsed > cutoff
 
 
 class DdgsSearch:
@@ -69,8 +95,14 @@ class DdgsSearch:
         if not url or url in seen:
             return
         seen.add(url)
+        parsed_date = parse_publication_date(published_at)
         results.append(
-            SearchResult(url=url, title=title or "", snippet=snippet or "", published_at=published_at)
+            SearchResult(
+                url=url,
+                title=title or "",
+                snippet=snippet or "",
+                published_at=parsed_date.isoformat() if parsed_date else published_at,
+            )
         )
 
 
@@ -122,6 +154,7 @@ async def gather_evidence(
     exclude_domain: str | None = None,
     queries: list[str] | None = None,
     alt_claim_text: str | None = None,
+    published_before: date | None = None,
 ) -> list[EvidenceSource]:
     if not queries:
         queries = [base_query(claim_text)]
@@ -136,6 +169,8 @@ async def gather_evidence(
             found.append(result)
     if exclude_domain:
         found = [result for result in found if domain_of(result.url) != exclude_domain]
+    if published_before:
+        found = [result for result in found if not published_after(result.published_at, published_before)]
     if not found:
         return []
     claim_texts = [claim_text] + ([alt_claim_text] if alt_claim_text else [])

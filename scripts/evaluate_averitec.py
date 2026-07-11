@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app.config import get_settings
 from app.evaluation.averitec import (
+    claim_date,
     classification_metrics,
     fact_check_domain,
     load_references,
@@ -82,6 +83,7 @@ async def run() -> None:
                 claim_id=args.offset + index,
                 exclude_domain=fact_check_domain(reference),
                 lang="en",
+                published_before=claim_date(reference),
             )
             predictions.append(prediction_from_verdict(verdict))
             write_json(prediction_path, predictions)
@@ -106,6 +108,7 @@ async def run() -> None:
         "llm_model": settings.llm_model,
         "embed_model": settings.embed_model,
         "elapsed_seconds": round(time.perf_counter() - started, 1),
+        "temporal_filtering": "exclude known source dates after claim_date",
     }
     write_json(metrics_path, metrics)
     print(f"predictions: {prediction_path}")
