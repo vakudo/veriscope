@@ -33,9 +33,28 @@ def test_single_cluster_reprints_count_once():
     assert verdict.independent_supporting == 1
 
 
-def test_conflicting_evidence():
+def test_equal_split_is_conflicting():
     verdict = aggregate_verdict(CLAIM, [make_item(0, Stance.supports), make_item(1, Stance.refutes)])
     assert verdict.label == VerdictLabel.conflicting
+    assert verdict.confidence == Confidence.low
+
+
+def test_supporting_majority_beats_single_refutation():
+    verdict = aggregate_verdict(
+        CLAIM,
+        [make_item(0, Stance.supports), make_item(1, Stance.supports), make_item(2, Stance.refutes)],
+    )
+    assert verdict.label == VerdictLabel.supported
+    assert verdict.confidence == Confidence.low
+    assert "опровергающие" in verdict.explanation
+
+
+def test_refuting_majority_beats_single_support():
+    verdict = aggregate_verdict(
+        CLAIM,
+        [make_item(0, Stance.refutes), make_item(1, Stance.refutes), make_item(2, Stance.supports)],
+    )
+    assert verdict.label == VerdictLabel.refuted
     assert verdict.confidence == Confidence.low
 
 

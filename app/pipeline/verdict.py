@@ -22,7 +22,12 @@ def build_explanation(label: VerdictLabel, supporting: int, refuting: int, total
         f"(всего источников: {total})."
     )
     if label == VerdictLabel.supported:
-        if supporting >= 2:
+        if refuting > 0:
+            tail = (
+                "Перевес независимых источников на стороне подтверждения, "
+                "но есть и опровергающие — уверенность низкая."
+            )
+        elif supporting >= 2:
             tail = "Утверждение подтверждается несколькими независимыми группами источников."
         else:
             tail = (
@@ -30,7 +35,12 @@ def build_explanation(label: VerdictLabel, supporting: int, refuting: int, total
                 "уверенность низкая."
             )
     elif label == VerdictLabel.refuted:
-        if refuting >= 2:
+        if supporting > 0:
+            tail = (
+                "Перевес независимых источников на стороне опровержения, "
+                "но есть и подтверждающие — уверенность низкая."
+            )
+        elif refuting >= 2:
             tail = "Утверждение опровергается несколькими независимыми группами источников."
         else:
             tail = (
@@ -48,8 +58,15 @@ def aggregate_verdict(claim: Claim, evidence: list[EvidenceItem]) -> ClaimVerdic
     supporting = {item.source.cluster_id for item in evidence if item.stance == Stance.supports}
     refuting = {item.source.cluster_id for item in evidence if item.stance == Stance.refutes}
     if supporting and refuting:
-        label = VerdictLabel.conflicting
-        confidence = Confidence.low
+        if len(supporting) > len(refuting):
+            label = VerdictLabel.supported
+            confidence = Confidence.low
+        elif len(refuting) > len(supporting):
+            label = VerdictLabel.refuted
+            confidence = Confidence.low
+        else:
+            label = VerdictLabel.conflicting
+            confidence = Confidence.low
     elif supporting:
         label = VerdictLabel.supported
         confidence = Confidence.high if len(supporting) >= 2 else Confidence.low
