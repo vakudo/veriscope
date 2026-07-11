@@ -115,6 +115,34 @@ ruff check .
 The test suite runs fully offline: LLM, search and embeddings are replaced with
 deterministic fakes via dependency injection.
 
+## Calibration: honest confidence instead of a fake score
+
+The system never outputs "this news is 87% true". Instead, confidence is
+*measured*: a labeled set of claims is run through the full pipeline, and the
+per-verdict accuracy becomes the number shown in the UI ("verdicts of this
+type were correct in N% of benchmark cases").
+
+```bash
+python -m scripts.calibrate data/calibration_full.jsonl
+```
+
+The script runs every claim through the real pipeline (web search, independence
+clustering, stance detection), compares the produced verdict against the gold
+label and writes per-label statistics to `calibration.json` (gitignored — it is
+a local measurement artifact, not source code). The backend picks the file up
+on startup and attaches `historical_accuracy` to every verdict.
+
+Honesty guards built in:
+
+- a percentage is only shown for verdict types with at least 20 benchmark
+  samples (`CALIBRATION_MIN_SAMPLES`); small buckets are silently dropped —
+  4/4 correct is luck, not a statistic;
+- verdict types with no data show nothing rather than a made-up number;
+- `data/calibration_full.jsonl` (75 claims) mixes well-documented facts,
+  popular misconceptions and deliberately fabricated local "news" that no
+  search can confirm — the latter measure how honestly the system says
+  "cannot verify".
+
 ## Evaluation plan
 
 - **AVeriTeC** — primary benchmark: real-world claims with web evidence and

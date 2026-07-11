@@ -15,6 +15,7 @@ async def run() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset")
     parser.add_argument("--output", default="calibration.json")
+    parser.add_argument("--sleep", type=float, default=2.0)
     args = parser.parse_args()
     settings = get_settings()
     llm = LLMClient(
@@ -30,6 +31,7 @@ async def run() -> None:
     stats: dict[str, dict[str, int]] = {}
     lines = [line.strip() for line in Path(args.dataset).read_text(encoding="utf-8").splitlines()]
     rows = [json.loads(line) for line in lines if line]
+    correct_total = 0
     for index, row in enumerate(rows):
         verdict = await pipeline._check_claim(Claim(id=index, text=row["claim"]))
         label = verdict.label.value
@@ -37,10 +39,19 @@ async def run() -> None:
         bucket["total"] += 1
         if label == row["gold"]:
             bucket["correct"] += 1
-        print(f"[{index + 1}/{len(rows)}] {row['claim'][:70]} -> {label} (gold: {row['gold']})")
-    Path(args.output).write_text(
-        json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+            correct_total += 1
+        mark = "+" if label == row["gold"] else "-"
+        accuracy = correct_total / (index + 1)
+        print(
+            f"[{index + 1}/{len(rows)}] {mark} {row['claim'][:60]} -> {label} "
+            f"(gold: {row['gold']}, running accuracy: {accuracy:.0%})",
+            flush=True,
+        )
+        Path(args.output).write_text(
+            json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        if args.sleep > 0 and index + 1 < len(rows):
+            await asyncio.sleep(args.sleep)
     print(f"saved: {args.output}")
     await llm.close()
 
