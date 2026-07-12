@@ -34,8 +34,7 @@ priority order:
 - [ ] Deploy the backend (docker compose is ready: VPS + Caddy/nginx with
       HTTPS; set `API_ACCESS_KEY`, `CORS_ORIGINS` and rate limits).
 - [ ] Point the bot's `BACKEND_URL` at production, run it on the same host.
-- [ ] GitHub Pages: Settings → Pages → branch `main`, folder `/docs`
-      (the page is already generated).
+- [x] GitHub Pages: deployed automatically by the `pages` workflow from `docs/`.
 
 ## 4. v1.0 release
 

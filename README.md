@@ -250,8 +250,8 @@ pipeline locally. Regenerate with a running backend:
 python -m scripts.build_demo
 ```
 
-To publish: repository Settings → Pages → deploy from branch `main`, folder
-`/docs`.
+The page is deployed to GitHub Pages automatically by the `pages` workflow on
+every change to `docs/`.
 
 ## Fine-tuning the stance component
 
