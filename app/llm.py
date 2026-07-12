@@ -51,5 +51,9 @@ class LLMClient:
         data = sorted(response.json()["data"], key=lambda item: item["index"])
         return [item["embedding"] for item in data]
 
+    async def health(self) -> None:
+        response = await self._client.get("/models")
+        response.raise_for_status()
+
     async def close(self) -> None:
         await self._client.aclose()

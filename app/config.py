@@ -25,13 +25,22 @@ class Settings(BaseSettings):
     verify_conflicts: bool = True
     deep_evidence: bool = True
     article_fetch_timeout: float = 12.0
+    max_article_bytes: int = 5_000_000
+    max_article_redirects: int = 5
     max_concurrent_analyses: int = 1
+    rate_limit_requests: int = 10
+    rate_limit_window_seconds: float = 60.0
+    cors_origins: str = "*"
     result_cache_ttl_seconds: float = 21600.0
     calibration_path: str = "calibration.json"
     calibration_min_samples: int = 20
     request_timeout: float = 120.0
     backend_url: str = "http://localhost:8000"
     telegram_bot_token: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 def get_settings() -> Settings:

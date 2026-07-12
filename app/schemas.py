@@ -37,9 +37,9 @@ class Confidence(StrEnum):
 
 
 class AnalyzeRequest(BaseModel):
-    text: str | None = None
-    url: str | None = None
-    title: str | None = None
+    text: str | None = Field(default=None, max_length=100_000)
+    url: str | None = Field(default=None, max_length=2_048)
+    title: str | None = Field(default=None, max_length=500)
     force: bool = False
 
 

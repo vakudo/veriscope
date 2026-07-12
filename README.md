@@ -119,6 +119,22 @@ Request: `{"text": "..."}` or `{"url": "..."}` (optional `"title"`).
 Response: per-claim verdicts with evidence, stances, source types, independence
 clusters, manipulation flags and a summary.
 
+`GET /api/health` is a process liveness check. `GET /api/ready` additionally
+checks that the configured OpenAI-compatible LLM endpoint responds.
+
+### Production safety
+
+URL analysis accepts only public HTTP(S) destinations. Veriscope validates DNS
+answers and every redirect target, rejects private, loopback, link-local and
+reserved addresses, and stops downloads above `MAX_ARTICLE_BYTES` (5 MB by
+default). API text, URL and title fields have explicit size limits.
+
+Analysis endpoints use a per-process, per-client rate limit controlled by
+`RATE_LIMIT_REQUESTS` and `RATE_LIMIT_WINDOW_SECONDS`. For a multi-instance
+deployment, put a shared rate limiter at the gateway as well. `CORS_ORIGINS` is
+a comma-separated allowlist; its local-development default is `*`, so hosted
+deployments should set explicit frontend and extension origins.
+
 ### Tests
 
 ```bash
@@ -274,7 +290,7 @@ app/
   config.py          settings (env-driven)
   schemas.py         API and pipeline models
   llm.py             OpenAI-compatible chat + embeddings client
-  api/routes.py      /api/analyze, /api/health
+  api/routes.py      /api/analyze, /api/health, /api/ready
   cache/store.py     evidence cache (pgvector or in-memory)
   pipeline/
     extract.py       article text extraction

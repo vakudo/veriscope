@@ -219,7 +219,7 @@ async def test_deep_evidence_replaces_snippet_with_best_paragraph(settings, monk
     offtopic = "OFFTOPIC " + "реклама подписки на наш замечательный журнал " * 3
     article = Article(text=f"{offtopic}\n{relevant}", published_at="2026-03-01")
 
-    async def fake_extract(url):
+    async def fake_extract(url, **kwargs):
         return article
 
     monkeypatch.setattr("app.pipeline.runner.extract_article", fake_extract)
@@ -288,7 +288,7 @@ async def test_historical_verification_drops_future_date_found_during_deep_fetch
         published_at="2020-11-01",
     )
 
-    async def fake_extract(url):
+    async def fake_extract(url, **kwargs):
         return article
 
     monkeypatch.setattr("app.pipeline.runner.extract_article", fake_extract)

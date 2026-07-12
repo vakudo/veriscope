@@ -99,7 +99,12 @@ class FactCheckPipeline:
             started = time.perf_counter()
             if url and not text:
                 await notify({"stage": "extract"})
-                article = await extract_article(url)
+                article = await extract_article(
+                    url,
+                    timeout=self.settings.article_fetch_timeout,
+                    max_bytes=self.settings.max_article_bytes,
+                    max_redirects=self.settings.max_article_redirects,
+                )
                 if article is None:
                     raise ValueError("failed to extract article text from url")
                 text = article.text
@@ -165,7 +170,13 @@ class FactCheckPipeline:
     async def _enrich_source(self, claim_text: str, source: EvidenceSource) -> None:
         try:
             article = await asyncio.wait_for(
-                extract_article(source.url), timeout=self.settings.article_fetch_timeout
+                extract_article(
+                    source.url,
+                    timeout=self.settings.article_fetch_timeout,
+                    max_bytes=self.settings.max_article_bytes,
+                    max_redirects=self.settings.max_article_redirects,
+                ),
+                timeout=self.settings.article_fetch_timeout + 1,
             )
         except Exception:
             return

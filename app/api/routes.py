@@ -2,7 +2,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.schemas import AnalysisResult, AnalyzeRequest
 
@@ -12,6 +12,18 @@ router = APIRouter()
 @router.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@router.get("/ready", response_model=None)
+async def ready(request: Request) -> dict[str, str] | JSONResponse:
+    checker = getattr(request.app.state, "readiness", None)
+    if checker is None:
+        return {"status": "ready"}
+    try:
+        await checker()
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "not_ready"})
+    return {"status": "ready"}
 
 
 @router.post("/analyze", response_model=AnalysisResult)

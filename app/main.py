@@ -10,6 +10,7 @@ from app.config import Settings, get_settings
 from app.llm import LLMClient
 from app.pipeline.runner import FactCheckPipeline
 from app.pipeline.search import DdgsSearch
+from app.rate_limit import RateLimitMiddleware
 
 
 def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | None = None) -> FastAPI:
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
                 resolved.calibration_path, resolved.calibration_min_samples
             ),
         )
+        app.state.readiness = llm.health
         yield
         await llm.close()
         if isinstance(cache, PgEvidenceCache):
@@ -52,13 +54,19 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
     app = FastAPI(title="Veriscope", version="0.3.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=resolved.cors_origin_list,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests=resolved.rate_limit_requests,
+        window_seconds=resolved.rate_limit_window_seconds,
     )
     app.include_router(router, prefix="/api")
     if pipeline is not None:
         app.state.pipeline = pipeline
+        app.state.readiness = getattr(pipeline.llm, "health", None)
     return app
 
 

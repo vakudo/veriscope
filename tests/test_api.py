@@ -54,6 +54,26 @@ async def test_health(settings):
     assert response.json() == {"status": "ok"}
 
 
+async def test_ready_without_external_checker(settings):
+    async with client_for(build_app(settings)) as client:
+        response = await client.get("/api/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+
+
+async def test_ready_reports_dependency_failure(settings):
+    app = build_app(settings)
+
+    async def unavailable():
+        raise RuntimeError("LLM unavailable")
+
+    app.state.readiness = unavailable
+    async with client_for(app) as client:
+        response = await client.get("/api/ready")
+    assert response.status_code == 503
+    assert response.json() == {"status": "not_ready"}
+
+
 async def test_analyze_text_end_to_end(settings):
     async with client_for(build_app(settings)) as client:
         response = await client.post(
@@ -102,3 +122,42 @@ async def test_analyze_rejects_blank_text(settings):
     async with client_for(build_app(settings)) as client:
         response = await client.post("/api/analyze", json={"text": "   "})
     assert response.status_code == 422
+
+
+async def test_analyze_rejects_oversized_input(settings):
+    async with client_for(build_app(settings)) as client:
+        response = await client.post("/api/analyze", json={"text": "x" * 100_001})
+    assert response.status_code == 422
+
+
+async def test_analyze_rate_limit(settings):
+    limited = settings.model_copy(
+        update={"rate_limit_requests": 1, "rate_limit_window_seconds": 60.0}
+    )
+    async with client_for(build_app(limited)) as client:
+        first = await client.post("/api/analyze", json={"text": TEXT})
+        second = await client.post("/api/analyze", json={"text": TEXT})
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.headers["retry-after"] == "60"
+
+
+async def test_cors_origins_are_configurable(settings):
+    restricted = settings.model_copy(update={"cors_origins": "https://app.example"})
+    async with client_for(build_app(restricted)) as client:
+        allowed = await client.options(
+            "/api/analyze",
+            headers={
+                "Origin": "https://app.example",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        denied = await client.options(
+            "/api/analyze",
+            headers={
+                "Origin": "https://evil.example",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+    assert allowed.headers["access-control-allow-origin"] == "https://app.example"
+    assert "access-control-allow-origin" not in denied.headers
