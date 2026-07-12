@@ -16,6 +16,7 @@ const I18N = {
     locale: "ru-RU",
     tagline: "Проверка новостей по независимым источникам",
     settings_label: "Адрес бэкенда",
+    api_key_label: "API-ключ (необязательно)",
     settings_saved: "Сохранено",
     lead: "Открой новостную статью и запусти проверку: текст будет разложен на утверждения, каждое проверено по независимым источникам.",
     check_page: "Проверить страницу",
@@ -78,6 +79,7 @@ const I18N = {
     locale: "en-US",
     tagline: "News checking against independent sources",
     settings_label: "Backend address",
+    api_key_label: "API key (optional)",
     settings_saved: "Saved",
     lead: "Open a news article and run a check: the text is split into claims, each verified against independent sources.",
     check_page: "Check this page",
@@ -191,6 +193,7 @@ const metaEl = document.getElementById("meta");
 const settingsPanel = document.getElementById("settings-panel");
 const settingsToggle = document.getElementById("settings-toggle");
 const backendInput = document.getElementById("backend-url");
+const apiKeyInput = document.getElementById("api-key");
 const saveSettingsButton = document.getElementById("save-settings");
 const settingsNote = document.getElementById("settings-note");
 
@@ -636,6 +639,7 @@ settingsToggle.addEventListener("click", () => {
 saveSettingsButton.addEventListener("click", async () => {
   const value = backendInput.value.trim() || DEFAULT_BACKEND;
   await chrome.storage.sync.set({ backendUrl: value });
+  await chrome.storage.local.set({ apiKey: apiKeyInput.value.trim() });
   backendInput.value = value;
   settingsNote.hidden = false;
 });
@@ -652,7 +656,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 (async () => {
   applyI18n();
   const { backendUrl } = await chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND });
+  const { apiKey } = await chrome.storage.local.get({ apiKey: "" });
   backendInput.value = backendUrl;
+  apiKeyInput.value = apiKey;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentTabUrl = (tab && tab.url) || "";
   await renderHistory();

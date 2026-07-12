@@ -82,10 +82,15 @@ async function runAnalysis(payload) {
   const baseJob = { status: "running", startedAt, pageUrl, pageTitle };
   await setJob({ ...baseJob, progress: null });
   try {
-    const { backendUrl } = await chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND });
+    const [{ backendUrl }, { apiKey }] = await Promise.all([
+      chrome.storage.sync.get({ backendUrl: DEFAULT_BACKEND }),
+      chrome.storage.local.get({ apiKey: "" }),
+    ]);
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) headers["X-API-Key"] = apiKey;
     const request = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     };

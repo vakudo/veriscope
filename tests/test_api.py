@@ -114,6 +114,35 @@ async def test_analyze_text_end_to_end(settings):
     assert "Проверено утверждений: 2" in body["summary"]
 
 
+async def test_api_key_protects_analysis_but_not_operations_endpoints(settings):
+    protected = settings.model_copy(update={"api_access_key": "beta-secret"})
+    async with client_for(build_app(protected)) as client:
+        missing = await client.post("/api/analyze", json={"text": TEXT})
+        invalid = await client.post(
+            "/api/analyze", json={"text": TEXT}, headers={"X-API-Key": "wrong"}
+        )
+        accepted = await client.post(
+            "/api/analyze", json={"text": TEXT}, headers={"X-API-Key": "beta-secret"}
+        )
+        health = await client.get("/api/health")
+        metrics = await client.get("/api/metrics")
+        preflight = await client.options(
+            "/api/analyze",
+            headers={
+                "Origin": "https://extension.example",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "X-API-Key, Content-Type",
+            },
+        )
+    assert missing.status_code == 401
+    assert missing.headers["www-authenticate"] == "API-Key"
+    assert invalid.status_code == 401
+    assert accepted.status_code == 200
+    assert health.status_code == 200
+    assert metrics.status_code == 200
+    assert preflight.status_code == 200
+
+
 async def test_analyze_stream_emits_progress_and_result(settings):
     async with client_for(build_app(settings)) as client:
         async with client.stream(

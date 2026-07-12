@@ -117,6 +117,7 @@ dependency.
 ```bash
 curl -X POST http://localhost:8000/api/analyze \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_ACCESS_KEY" \
   -d '{"url": "https://example.com/news/article"}'
 ```
 
@@ -144,6 +145,12 @@ Analysis endpoints use a per-process, per-client rate limit controlled by
 deployment, put a shared rate limiter at the gateway as well. `CORS_ORIGINS` is
 a comma-separated allowlist; its local-development default is `*`, so hosted
 deployments should set explicit frontend and extension origins.
+
+Set `API_ACCESS_KEY` on a hosted beta to require the `X-API-Key` header on both
+analysis endpoints. An empty value keeps local development unauthenticated.
+Health, readiness and metrics stay available to infrastructure probes. The
+browser extension stores its optional key in local extension storage (not
+synced between browsers); the Telegram bot reads the same environment setting.
 
 ### Tests
 

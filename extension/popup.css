@@ -454,6 +454,10 @@ main {
   margin-top: 1px;
 }
 
+#settings-panel .secondary-setting {
+  margin-top: 8px;
+}
+
 .source .evidence-quote {
   display: block;
   margin-top: 3px;

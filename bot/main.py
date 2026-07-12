@@ -109,6 +109,10 @@ MIN_EDIT_INTERVAL = 3.0
 dp = Dispatcher()
 
 
+def backend_headers(settings) -> dict[str, str]:
+    return {"X-API-Key": settings.api_access_key} if settings.api_access_key else {}
+
+
 def texts_for(message: Message) -> dict:
     code = (message.from_user.language_code or "") if message.from_user else ""
     return TEXTS["ru"] if code.lower().startswith("ru") else TEXTS["en"]
@@ -127,9 +131,13 @@ async def analyze_with_progress(
 ) -> AnalysisResult:
     last_edit = 0.0
     last_text = ""
+    headers = backend_headers(settings)
     async with httpx.AsyncClient(timeout=settings.request_timeout * 3) as client:
         async with client.stream(
-            "POST", f"{settings.backend_url}/api/analyze/stream", json=payload
+            "POST",
+            f"{settings.backend_url}/api/analyze/stream",
+            json=payload,
+            headers=headers,
         ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():

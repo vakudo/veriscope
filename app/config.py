@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     calibration_min_samples: int = 20
     request_timeout: float = 120.0
     backend_url: str = "http://localhost:8000"
+    api_access_key: str = ""
     telegram_bot_token: str = ""
 
     @property

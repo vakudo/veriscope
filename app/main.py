@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.api.routes import router
+from app.auth import ApiKeyMiddleware
 from app.cache.store import MemoryEvidenceCache, MemoryResultCache, PgEvidenceCache
 from app.calibration import load_calibration
 from app.config import Settings, get_settings
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(ApiKeyMiddleware, api_key=resolved.api_access_key)
     app.add_middleware(
         RateLimitMiddleware,
         requests=resolved.rate_limit_requests,
