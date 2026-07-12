@@ -52,6 +52,11 @@ def aggregate_verdict(
         elif len(refuting) > len(supporting):
             label = VerdictLabel.refuted
             confidence = Confidence.low
+        elif len(refuting) == 1:
+            # calibration: single-group conflicts were wrong 8/8 times, so one
+            # dissenting group is treated as noise, not a conflict
+            label = VerdictLabel.supported
+            confidence = Confidence.low
         else:
             label = VerdictLabel.conflicting
             confidence = Confidence.low

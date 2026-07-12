@@ -275,7 +275,9 @@ async def test_independent_clusters_judged_separately(settings):
     )
     verdict = result.claims[0]
     assert stance_calls(llm) == 4
-    assert verdict.label == VerdictLabel.conflicting
+    assert verdict.label == VerdictLabel.supported
+    assert verdict.independent_supporting == 1
+    assert verdict.independent_refuting == 1
 
 
 async def test_historical_verification_drops_future_date_found_during_deep_fetch(

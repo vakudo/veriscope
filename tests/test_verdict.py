@@ -33,8 +33,22 @@ def test_single_cluster_reprints_count_once():
     assert verdict.independent_supporting == 1
 
 
-def test_equal_split_is_conflicting():
+def test_single_refuting_group_does_not_force_conflict():
     verdict = aggregate_verdict(CLAIM, [make_item(0, Stance.supports), make_item(1, Stance.refutes)])
+    assert verdict.label == VerdictLabel.supported
+    assert verdict.confidence == Confidence.low
+
+
+def test_equal_split_of_multiple_groups_is_conflicting():
+    verdict = aggregate_verdict(
+        CLAIM,
+        [
+            make_item(0, Stance.supports),
+            make_item(1, Stance.supports),
+            make_item(2, Stance.refutes),
+            make_item(3, Stance.refutes),
+        ],
+    )
     assert verdict.label == VerdictLabel.conflicting
     assert verdict.confidence == Confidence.low
 
