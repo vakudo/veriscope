@@ -19,8 +19,11 @@ priority order:
 
 ## 2. External benchmarks
 
-- [ ] Full AVeriTeC dev split run (`python -m scripts.evaluate_averitec` without
-      `--limit`) — the current baseline is a 20-claim balanced sample.
+- [x] Stratified 100-claim AVeriTeC run (25 per label) —
+      `docs/evaluation/averitec-stratified-100.md`.
+- [ ] Full AVeriTeC dev split run (`python -m scripts.evaluate_averitec`
+      without `--limit`) once retrieval improves — the stratified run shows
+      retrieval, not stance, is the bottleneck.
 - [ ] FEVER dev: stance component accuracy in isolation
       (supports / refutes / NEI).
 - [ ] Publish the results in the README — the measured numbers are the main

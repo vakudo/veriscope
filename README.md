@@ -290,8 +290,15 @@ python -m scripts.evaluate_averitec ../AVeriTeC/data/dev.json \
   --sample-per-label 5 --seed 42 --output-dir artifacts/averitec-baseline-20
 ```
 
-The first exploratory balanced run and its limitations are documented in
-[`docs/evaluation/averitec-baseline-20.md`](docs/evaluation/averitec-baseline-20.md).
+Measured runs, newest first:
+
+- [`docs/evaluation/averitec-stratified-100.md`](docs/evaluation/averitec-stratified-100.md) —
+  100 claims (25 per label): accuracy 37%, macro-F1 31%, abstention 42%.
+  Refutations now trade recall for precision (a wrong claim more often gets
+  "cannot verify" than a confident wrong verdict), and AVeriTeC's combined
+  conflicting/cherrypicking class is a documented blind spot.
+- [`docs/evaluation/averitec-baseline-20.md`](docs/evaluation/averitec-baseline-20.md) —
+  the first exploratory 20-claim baseline and its failure-mode analysis.
 
 Add `--strict-dates` to reject evidence whose publication date cannot be
 established. Without it, undated evidence remains eligible for better recall. Both
