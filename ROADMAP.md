@@ -9,13 +9,10 @@ priority order:
 
 ## 1. Verdict quality
 
-- [ ] Re-run calibration (`python -m scripts.calibrate data/calibration_full.jsonl`)
-      after the grounded-refutation change and update the README table —
-      the published numbers predate it, and `conflicting` (0% accuracy) was
-      driven exactly by ungrounded refutations.
-- [ ] If `conflicting` is still weak: require at least two independent refuting
-      source groups before a refutation can outweigh support
-      (`app/pipeline/verdict.py`).
+- [x] Re-run calibration after the grounded-refutation change and update the
+      README table.
+- [x] Require at least two independent refuting source groups for a conflict —
+      a lone dissenting group is noise (was wrong 8/8 on calibration).
 - [ ] Fine-tune the stance component (QLoRA on FEVER gold evidence, using the
       production prompt), measure before/after on the same calibration set.
       Adopt only if macro-F1 actually improves.

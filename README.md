@@ -220,24 +220,25 @@ overall accuracy 83% (62/75):
 
 | Produced verdict | Samples | Accuracy |
 |---|---|---|
-| supported | 26 | 92% |
-| refuted | 19 | 95% |
-| unverifiable | 24 | 83% |
-| conflicting | 6 | 0% |
+| supported | 29 | 93% |
+| refuted | 21 | 81% |
+| unverifiable | 25 | 72% |
+| conflicting | 0 | — |
 
 Notable results:
 
-- **all 20 fabricated stories got "cannot verify"** — the system never
-  confirmed a non-existent event, which is the failure mode that matters most
-  for a fact-checking assistant;
-- **"conflicting" is a known weak spot**: every time the system claimed
-  sources contradict each other, the claim was actually clearly true or
-  clearly false — one noisy stance judgement is enough to flip an otherwise
-  correct verdict. Fixing this (stance fine-tuning, requiring at least two
-  independent refuting groups) is the next planned experiment;
-- errors concentrate in stance detection on borderline snippets, which is the
-  argument for fine-tuning the stance component on FEVER (see evaluation
-  plan).
+- **no fabricated story was ever confirmed** — 18 of the 20 got "cannot
+  verify" and 2 got "refuted"; saying "false" instead of "cannot verify" is
+  imprecise but directionally safe, and confirming a non-existent event (the
+  failure mode that matters most) never happened;
+- **"conflicting" no longer occurs on this set — by design.** In earlier runs
+  every single-group conflict verdict was wrong (8/8): one noisy stance
+  judgement flipped an otherwise clear claim. A conflict now requires at
+  least two independent refuting groups, and a lone dissenting group is
+  treated as noise;
+- the remaining weak spot is the `unverifiable` bucket (72%): real claims
+  whose evidence retrieval came up empty — an argument for better retrieval
+  and for fine-tuning the stance component (see evaluation plan).
 
 ## Demo
 
