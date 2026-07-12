@@ -15,6 +15,7 @@ services:
 
   api:
     build: .
+    restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgresql://veriscope:veriscope@db:5432/veriscope
@@ -23,15 +24,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   bot:
     build: .
+    restart: unless-stopped
     command: ["python", "-m", "bot.main"]
     env_file: .env
     environment:
       BACKEND_URL: http://api:8000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   pgdata:

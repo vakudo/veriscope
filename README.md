@@ -107,6 +107,11 @@ docker compose up --build
 Starts Postgres with pgvector (evidence cache), the API on port 8000 and the
 bot. The LLM endpoint is configured via `.env`.
 
+The runtime image runs as the unprivileged `veriscope` user and exposes a
+readiness-based Docker health check. Compose drops Linux capabilities from the
+API and bot containers, and starts the bot only after the API can reach its LLM
+dependency.
+
 ### API
 
 ```bash
@@ -144,6 +149,22 @@ ruff check .
 
 The test suite runs fully offline: LLM, search and embeddings are replaced with
 deterministic fakes via dependency injection.
+
+### Beta release
+
+Every CI run builds the production container and a deterministic browser
+extension archive. Download `veriscope-extension` from the workflow artifacts
+to test the exact package produced from a commit.
+
+To build the same archive locally:
+
+```bash
+python -m scripts.package_extension
+```
+
+Pushing a tag that exactly matches the shared application and extension version
+(for example `v0.4.0`) runs the full test suite and creates a GitHub release with
+the ZIP attached. A mismatched tag fails before publishing.
 
 ## Calibration: honest confidence instead of a fake score
 

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import __version__
 from app.api.routes import router
 from app.cache.store import MemoryEvidenceCache, MemoryResultCache, PgEvidenceCache
 from app.calibration import load_calibration
@@ -51,7 +52,7 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
         if isinstance(cache, PgEvidenceCache):
             await cache.close()
 
-    app = FastAPI(title="Veriscope", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="Veriscope", version=__version__, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=resolved.cors_origin_list,
