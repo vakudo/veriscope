@@ -2,7 +2,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from app.schemas import AnalysisResult, AnalyzeRequest
 
@@ -24,6 +24,14 @@ async def ready(request: Request) -> dict[str, str] | JSONResponse:
     except Exception:
         return JSONResponse(status_code=503, content={"status": "not_ready"})
     return {"status": "ready"}
+
+
+@router.get("/metrics", response_class=PlainTextResponse)
+async def metrics(request: Request) -> PlainTextResponse:
+    return PlainTextResponse(
+        request.app.state.metrics.render(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @router.post("/analyze", response_model=AnalysisResult)

@@ -9,6 +9,7 @@ from app.cache.store import MemoryEvidenceCache, MemoryResultCache, PgEvidenceCa
 from app.calibration import load_calibration
 from app.config import Settings, get_settings
 from app.llm import LLMClient
+from app.observability import MetricsRegistry, ObservabilityMiddleware
 from app.pipeline.runner import FactCheckPipeline
 from app.pipeline.search import DdgsSearch
 from app.rate_limit import RateLimitMiddleware
@@ -53,6 +54,8 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
             await cache.close()
 
     app = FastAPI(title="Veriscope", version=__version__, lifespan=lifespan)
+    metrics = MetricsRegistry()
+    app.state.metrics = metrics
     app.add_middleware(
         CORSMiddleware,
         allow_origins=resolved.cors_origin_list,
@@ -64,6 +67,7 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
         requests=resolved.rate_limit_requests,
         window_seconds=resolved.rate_limit_window_seconds,
     )
+    app.add_middleware(ObservabilityMiddleware, registry=metrics)
     app.include_router(router, prefix="/api")
     if pipeline is not None:
         app.state.pipeline = pipeline

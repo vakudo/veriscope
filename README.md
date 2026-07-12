@@ -127,6 +127,11 @@ clusters, manipulation flags and a summary.
 `GET /api/health` is a process liveness check. `GET /api/ready` additionally
 checks that the configured OpenAI-compatible LLM endpoint responds.
 
+Every response includes an `X-Request-ID`. `GET /api/metrics` exposes
+Prometheus-compatible request counters, durations and the in-flight gauge.
+Access logs are structured JSON containing request metadata only; article text,
+claims, search queries and evidence are never written to those logs.
+
 ### Production safety
 
 URL analysis accepts only public HTTP(S) destinations. Veriscope validates DNS
@@ -311,7 +316,7 @@ app/
   config.py          settings (env-driven)
   schemas.py         API and pipeline models
   llm.py             OpenAI-compatible chat + embeddings client
-  api/routes.py      /api/analyze, /api/health, /api/ready
+  api/routes.py      analysis, health, readiness and metrics endpoints
   cache/store.py     evidence cache (pgvector or in-memory)
   pipeline/
     extract.py       article text extraction

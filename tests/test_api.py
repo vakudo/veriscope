@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 
 from httpx import ASGITransport, AsyncClient
 
@@ -74,6 +76,22 @@ async def test_ready_reports_dependency_failure(settings):
     assert response.json() == {"status": "not_ready"}
 
 
+async def test_request_id_and_metrics_do_not_log_payload(settings, caplog):
+    secret_text = "private article text"
+    with caplog.at_level(logging.INFO, logger="uvicorn.veriscope_access"):
+        async with client_for(build_app(settings)) as client:
+            response = await client.post("/api/analyze", json={"text": secret_text})
+            metrics = await client.get("/api/metrics")
+    assert response.status_code == 200
+    assert re.fullmatch(r"[0-9a-f]{32}", response.headers["x-request-id"])
+    assert 'path="/api/analyze",status="200"' in metrics.text
+    access_records = [
+        record.message for record in caplog.records if record.name == "uvicorn.veriscope_access"
+    ]
+    assert any('"path":"/api/analyze"' in message for message in access_records)
+    assert all(secret_text not in message for message in access_records)
+
+
 async def test_analyze_text_end_to_end(settings):
     async with client_for(build_app(settings)) as client:
         response = await client.post(
@@ -137,9 +155,11 @@ async def test_analyze_rate_limit(settings):
     async with client_for(build_app(limited)) as client:
         first = await client.post("/api/analyze", json={"text": TEXT})
         second = await client.post("/api/analyze", json={"text": TEXT})
+        metrics = await client.get("/api/metrics")
     assert first.status_code == 200
     assert second.status_code == 429
     assert second.headers["retry-after"] == "60"
+    assert 'path="/api/analyze",status="429"' in metrics.text
 
 
 async def test_cors_origins_are_configurable(settings):
