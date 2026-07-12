@@ -9,6 +9,8 @@ web, checks how independent the sources really are, and reports per-claim
 verdicts with citations. When there is not enough evidence, it honestly says
 "cannot verify" instead of inventing a fake confidence percentage.
 
+[![Veriscope demo](docs/screenshot.png)](https://vakudo.github.io/veriscope/)
+
 ## Why not a truth score
 
 An LLM cannot reliably measure "how true" a news story is, and a made-up
@@ -91,6 +93,13 @@ uvicorn app.main:app --reload
 An OpenAI-compatible LLM endpoint must be reachable (default:
 Ollama at `http://localhost:11434/v1` with `qwen2.5:7b-instruct` for chat and
 `bge-m3` for embeddings).
+
+The model is a config value, not a dependency: point `LLM_MODEL` /
+`LLM_BASE_URL` in `.env` at any OpenAI-compatible endpoint (Ollama, vLLM,
+OpenRouter). A smaller model such as `qwen2.5:3b-instruct` makes analysis
+several times faster on CPU at some quality cost — the published calibration
+numbers were measured with the 7B default, so re-run
+`python -m scripts.calibrate` if you switch.
 
 Load the extension: `chrome://extensions` → Developer mode → Load unpacked →
 select the `extension/` folder. The backend URL is configurable in the popup.
@@ -244,14 +253,6 @@ python -m scripts.build_demo
 
 The page is deployed to GitHub Pages automatically by the `pages` workflow on
 every change to `docs/`.
-
-## Fine-tuning the stance component
-
-`notebooks/stance_lora.ipynb` is a Colab notebook that fine-tunes
-Qwen2.5-7B-Instruct with QLoRA on FEVER gold evidence, using the exact prompt
-the pipeline sends in production. It measures zero-shot vs fine-tuned macro-F1
-and exports a GGUF for Ollama; the calibration table above is the before/after
-benchmark for the whole system.
 
 ## Evaluation plan
 

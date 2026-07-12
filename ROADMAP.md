@@ -16,9 +16,9 @@ priority order:
 - [ ] If `conflicting` is still weak: require at least two independent refuting
       source groups before a refutation can outweigh support
       (`app/pipeline/verdict.py`).
-- [ ] Run the stance fine-tuning experiment (`notebooks/stance_lora.ipynb`,
-      Colab), export the GGUF, measure before/after on the same calibration
-      set. Adopt only if macro-F1 actually improves.
+- [ ] Fine-tune the stance component (QLoRA on FEVER gold evidence, using the
+      production prompt), measure before/after on the same calibration set.
+      Adopt only if macro-F1 actually improves.
 
 ## 2. External benchmarks
 
