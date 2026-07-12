@@ -7,12 +7,12 @@ import httpx
 
 EXAMPLES = [
     {
-        "name": "Реальная новость (космос)",
-        "title": "SpaceX запустила очередную партию Starlink",
+        "name": "Новость на английском (космос)",
+        "title": "SpaceX launches another batch of Starlink satellites",
         "text": (
-            "Компания SpaceX провела успешный запуск ракеты Falcon 9 с мыса Канаверал. "
-            "На орбиту выведена очередная партия спутников Starlink. "
-            "Первая ступень ракеты совершила посадку на морскую платформу."
+            "SpaceX successfully launched a Falcon 9 rocket from Cape Canaveral, "
+            "carrying another batch of Starlink satellites into orbit. "
+            "The first stage booster landed on a drone ship in the ocean."
         ),
     },
     {
@@ -195,7 +195,8 @@ async def build(backend: str, output: Path) -> None:
         "<h1>Veriscope</h1>"
         '<p class="sub">Ассистент проверки новостей: атомарные утверждения, независимые источники, '
         "честное «не удалось проверить» вместо фейкового процента правды. "
-        "Ниже — три реальных разбора, посчитанных этим пайплайном локально (Qwen2.5-7B, CPU).</p>"
+        "Ниже — три реальных разбора, посчитанных этим пайплайном локально (Qwen2.5-7B, CPU); "
+        "первый — англоязычная новость.</p>"
         f'<div class="tabs">{"".join(tabs)}</div>{"".join(bodies)}'
         "<footer>Код и метрики калибровки: "
         '<a href="https://github.com/vakudo/veriscope">github.com/vakudo/veriscope</a></footer>'
