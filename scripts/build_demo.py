@@ -7,7 +7,7 @@ import httpx
 
 EXAMPLES = [
     {
-        "name": "Новость на английском (космос)",
+        "name": "Real news (space)",
         "title": "SpaceX launches another batch of Starlink satellites",
         "text": (
             "SpaceX successfully launched a Falcon 9 rocket from Cape Canaveral, "
@@ -16,37 +16,37 @@ EXAMPLES = [
         ),
     },
     {
-        "name": "Популярные мифы",
-        "title": "Шокирующие факты, о которых молчат учёные!!!",
+        "name": "Popular myths",
+        "title": "Shocking facts scientists don't want you to know!!!",
         "text": (
-            "Великая Китайская стена видна невооружённым глазом с Луны. "
-            "Человек использует только 10 процентов своего мозга. "
-            "По словам анонимных источников, учёные скрывают эти факты десятилетиями."
+            "The Great Wall of China is visible to the naked eye from the Moon. "
+            "Humans use only 10 percent of their brains. "
+            "According to anonymous sources, scientists have been hiding these facts for decades."
         ),
     },
     {
-        "name": "Выдуманная новость",
-        "title": "Сенсация в Урюпинске",
+        "name": "Fabricated story",
+        "title": "Sensation in Springfield",
         "text": (
-            "Компания Ромашка-Технологии из Урюпинска продала четыре миллиона умных чайников "
-            "за 2025 год. Директор компании Пётр Самоваров заявил, что следующая цель — "
-            "выход на рынок умных самоваров."
+            "Daisy Technologies of Springfield sold four million smart kettles in 2025. "
+            "Company director Peter Kettleworth said the next goal is to enter "
+            "the smart teapot market."
         ),
     },
 ]
 
 VERDICT_TITLES = {
-    "supported": "Подтверждается",
-    "refuted": "Опровергается",
-    "conflicting": "Противоречиво",
-    "unverifiable": "Не удалось проверить",
+    "supported": "Supported",
+    "refuted": "Refuted",
+    "conflicting": "Conflicting",
+    "unverifiable": "Unverifiable",
 }
 
 SOURCE_TYPE_TITLES = {
-    "possible_primary": "возможный первоисточник",
-    "reprint": "перепечатка",
-    "opinion": "мнение",
-    "unknown": "тип не определён",
+    "possible_primary": "possible primary source",
+    "reprint": "reprint",
+    "opinion": "opinion",
+    "unknown": "type unknown",
 }
 
 STANCE_ICONS = {"supports": "✓", "refutes": "✕", "not_enough_info": "·"}
@@ -125,9 +125,9 @@ def esc(value: str) -> str:
 
 def render_claim(verdict: dict) -> str:
     label = verdict["label"]
-    conf_parts = ["уверенность: высокая" if verdict["confidence"] == "high" else "уверенность: низкая"]
+    conf_parts = ["confidence: high" if verdict["confidence"] == "high" else "confidence: low"]
     if isinstance(verdict.get("historical_accuracy"), (int, float)):
-        conf_parts.append(f"на бенчмарке: {round(verdict['historical_accuracy'] * 100)}%")
+        conf_parts.append(f"on benchmark: {round(verdict['historical_accuracy'] * 100)}%")
     sources = ""
     if verdict["evidence"]:
         rows = ""
@@ -143,7 +143,7 @@ def render_claim(verdict: dict) -> str:
                 f'<span class="meta"> — {esc(", ".join(meta))}</span></span></div>'
             )
         sources = (
-            f"<details><summary>Источники ({len(verdict['evidence'])})</summary>{rows}</details>"
+            f"<details><summary>Sources ({len(verdict['evidence'])})</summary>{rows}</details>"
         )
     return (
         f'<div class="claim {label}">'
@@ -164,7 +164,7 @@ def render_example(index: int, example: dict, result: dict) -> tuple[str, str]:
     claims = "".join(render_claim(verdict) for verdict in result["claims"])
     body = (
         f'<div class="example{" active" if index == 0 else ""}" id="example-{index}">'
-        f'<div class="input-box"><div class="label">Входной текст</div>'
+        f'<div class="input-box"><div class="label">Input text</div>'
         f'<div class="headline">{esc(example["title"])}</div>{esc(example["text"])}</div>'
         f'<div class="summary">{esc(result["summary"])}</div>'
         f"{flags}{claims}</div>"
@@ -187,18 +187,17 @@ async def build(backend: str, output: Path) -> None:
             bodies.append(body)
     page = (
         "<!DOCTYPE html>\n"
-        '<html lang="ru"><head><meta charset="utf-8">'
+        '<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        "<title>Veriscope — демо</title>"
+        "<title>Veriscope — demo</title>"
         f"<style>{PAGE_STYLE}</style></head><body>"
         '<div class="wrap">'
         "<h1>Veriscope</h1>"
-        '<p class="sub">Ассистент проверки новостей: атомарные утверждения, независимые источники, '
-        "честное «не удалось проверить» вместо фейкового процента правды. "
-        "Ниже — три реальных разбора, посчитанных этим пайплайном локально (Qwen2.5-7B, CPU); "
-        "первый — англоязычная новость.</p>"
+        '<p class="sub">A news fact-checking assistant: atomic claims, independent sources, '
+        'an honest "cannot verify" instead of a fake truth percentage. '
+        "Below are three real analyses computed by this pipeline locally (Qwen2.5-7B, CPU).</p>"
         f'<div class="tabs">{"".join(tabs)}</div>{"".join(bodies)}'
-        "<footer>Код и метрики калибровки: "
+        "<footer>Code and calibration metrics: "
         '<a href="https://github.com/vakudo/veriscope">github.com/vakudo/veriscope</a></footer>'
         f"</div><script>{PAGE_SCRIPT}</script></body></html>"
     )
