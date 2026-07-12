@@ -1,5 +1,8 @@
 # Veriscope
 
+[![CI](https://github.com/vakudo/veriscope/actions/workflows/ci.yml/badge.svg)](https://github.com/vakudo/veriscope/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A news fact-checking **assistant** — not a "truth detector". It decomposes a news
 article into atomic checkable claims, retrieves evidence for each claim from the
 web, checks how independent the sources really are, and reports per-claim
@@ -237,6 +240,8 @@ Notable results:
 
 ## Demo
 
+**Live: [vakudo.github.io/veriscope](https://vakudo.github.io/veriscope/)**
+
 `docs/index.html` is a static demo with three pre-computed analyses (a real
 news story, a myth compilation, a fabricated local story) produced by this
 pipeline locally. Regenerate with a running backend:
@@ -266,6 +271,8 @@ benchmark for the whole system.
   7-category corpus) — **qualitative cross-lingual evaluation only**, not
   training data: they are small and their labels carry the bias of specific
   fact-checking agencies.
+
+The full plan towards v1.0 lives in [ROADMAP.md](ROADMAP.md).
 
 ### Reproducible AVeriTeC evaluation
 
