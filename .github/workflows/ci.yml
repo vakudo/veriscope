@@ -7,6 +7,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: veriscope
+          POSTGRES_PASSWORD: veriscope
+          POSTGRES_DB: veriscope_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U veriscope -d veriscope_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://veriscope:veriscope@localhost:5432/veriscope_test
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6

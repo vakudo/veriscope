@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.api.routes import router
 from app.auth import ApiKeyMiddleware
-from app.cache.store import MemoryEvidenceCache, MemoryResultCache, PgEvidenceCache
+from app.cache.store import MemoryEvidenceCache, MemoryResultCache, PgEvidenceCache, PgResultCache
 from app.calibration import load_calibration
 from app.config import Settings, get_settings
 from app.llm import LLMClient
@@ -36,14 +36,17 @@ def create_app(settings: Settings | None = None, pipeline: FactCheckPipeline | N
                 resolved.database_url, resolved.embed_dim, resolved.cache_similarity_threshold
             )
             await cache.init()
+            result_cache = PgResultCache(cache.pool, resolved.result_cache_ttl_seconds)
+            await result_cache.init()
         else:
             cache = MemoryEvidenceCache(resolved.cache_similarity_threshold)
+            result_cache = MemoryResultCache(resolved.result_cache_ttl_seconds)
         app.state.pipeline = FactCheckPipeline(
             llm=llm,
             search=DdgsSearch(),
             cache=cache,
             settings=resolved,
-            result_cache=MemoryResultCache(resolved.result_cache_ttl_seconds),
+            result_cache=result_cache,
             calibration=load_calibration(
                 resolved.calibration_path, resolved.calibration_min_samples
             ),

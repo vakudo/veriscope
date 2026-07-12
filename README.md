@@ -71,6 +71,7 @@ for and against a statement".
   claim extraction, stance detection and embeddings
 - **DuckDuckGo** web search for evidence retrieval
 - **pgvector** evidence cache (optional; falls back to in-memory)
+- PostgreSQL-backed result cache with TTL when `DATABASE_URL` is configured
 - Docker Compose + GitHub Actions CI
 
 ## Quickstart
@@ -105,7 +106,11 @@ docker compose up --build
 ```
 
 Starts Postgres with pgvector (evidence cache), the API on port 8000 and the
-bot. The LLM endpoint is configured via `.env`.
+bot. The LLM endpoint is configured via `.env`. Completed analyses are kept in
+PostgreSQL until `RESULT_CACHE_TTL_SECONDS` expires, so repeated requests remain
+fast after an API restart; local mode uses the same policy in memory. Cached
+rows contain the structured verdict, extracted claims and evidence citations,
+but not the original full article text.
 
 The runtime image runs as the unprivileged `veriscope` user and exposes a
 readiness-based Docker health check. Compose drops Linux capabilities from the

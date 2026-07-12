@@ -37,6 +37,57 @@ class MemoryResultCache:
         self._items[key] = (time.time(), result.model_copy(deep=True))
 
 
+class PgResultCache:
+    def __init__(self, pool: asyncpg.Pool, ttl_seconds: float = 21600.0):
+        self._pool = pool
+        self.ttl_seconds = ttl_seconds
+
+    async def init(self) -> None:
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS result_cache (
+                    result_key TEXT PRIMARY KEY,
+                    payload JSONB NOT NULL,
+                    expires_at TIMESTAMPTZ NOT NULL
+                )
+                """
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS result_cache_expires_at_idx ON result_cache (expires_at)"
+            )
+
+    async def get(self, key: str) -> AnalysisResult | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT payload
+                FROM result_cache
+                WHERE result_key = $1 AND expires_at > now()
+                """,
+                key,
+            )
+        if row is None:
+            return None
+        return AnalysisResult.model_validate(json.loads(row["payload"]))
+
+    async def put(self, key: str, result: AnalysisResult) -> None:
+        payload = json.dumps(result.model_dump(mode="json"))
+        async with self._pool.acquire() as conn:
+            await conn.execute("DELETE FROM result_cache WHERE expires_at <= now()")
+            await conn.execute(
+                """
+                INSERT INTO result_cache (result_key, payload, expires_at)
+                VALUES ($1, $2, now() + $3::double precision * interval '1 second')
+                ON CONFLICT (result_key)
+                DO UPDATE SET payload = excluded.payload, expires_at = excluded.expires_at
+                """,
+                key,
+                payload,
+                self.ttl_seconds,
+            )
+
+
 class EvidenceCache(Protocol):
     async def get(
         self, claim_text: str, embedding: list[float] | None
@@ -100,6 +151,12 @@ class PgEvidenceCache:
     async def close(self) -> None:
         if self._pool is not None:
             await self._pool.close()
+
+    @property
+    def pool(self) -> asyncpg.Pool:
+        if self._pool is None:
+            raise RuntimeError("PostgreSQL cache is not initialized")
+        return self._pool
 
     async def get(
         self, claim_text: str, embedding: list[float] | None = None

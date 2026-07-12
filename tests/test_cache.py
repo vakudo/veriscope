@@ -1,7 +1,9 @@
-from app.cache.store import MemoryEvidenceCache
+import json
+
+from app.cache.store import MemoryEvidenceCache, PgResultCache
 from app.pipeline.runner import FactCheckPipeline
 from app.pipeline.search import SearchResult
-from app.schemas import EvidenceItem, EvidenceSource, Stance
+from app.schemas import AnalysisResult, EvidenceItem, EvidenceSource, Stance
 from tests.conftest import FakeLLM, FakeSearch
 
 
@@ -63,3 +65,66 @@ async def test_pipeline_skips_search_on_cache_hit(settings):
     assert queries_after_first > 0
     assert len(search.queries) == queries_after_first
     assert first.claims[0].label == second.claims[0].label
+
+
+class FakeConnection:
+    def __init__(self, row=None):
+        self.row = row
+        self.executions = []
+        self.fetches = []
+
+    async def execute(self, query, *args):
+        self.executions.append((query, args))
+
+    async def fetchrow(self, query, *args):
+        self.fetches.append((query, args))
+        return self.row
+
+
+class FakeAcquire:
+    def __init__(self, connection):
+        self.connection = connection
+
+    async def __aenter__(self):
+        return self.connection
+
+    async def __aexit__(self, *args):
+        return None
+
+
+class FakePool:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def acquire(self):
+        return FakeAcquire(self.connection)
+
+
+def cached_result() -> AnalysisResult:
+    return AnalysisResult(claims=[], flags=[], summary="cached")
+
+
+async def test_postgres_result_cache_initializes_and_enforces_ttl():
+    connection = FakeConnection()
+    cache = PgResultCache(FakePool(connection), ttl_seconds=90)
+    await cache.init()
+    await cache.put("result-key", cached_result())
+    statements = "\n".join(query for query, _ in connection.executions)
+    assert "CREATE TABLE IF NOT EXISTS result_cache" in statements
+    assert "DELETE FROM result_cache WHERE expires_at <= now()" in statements
+    insert, args = connection.executions[-1]
+    assert "ON CONFLICT (result_key)" in insert
+    assert args[0] == "result-key"
+    assert json.loads(args[1])["summary"] == "cached"
+    assert args[2] == 90
+
+
+async def test_postgres_result_cache_restores_typed_result():
+    payload = json.dumps(cached_result().model_dump(mode="json"))
+    connection = FakeConnection(row={"payload": payload})
+    cache = PgResultCache(FakePool(connection))
+    result = await cache.get("result-key")
+    assert result == cached_result()
+    query, args = connection.fetches[0]
+    assert "expires_at > now()" in query
+    assert args == ("result-key",)
