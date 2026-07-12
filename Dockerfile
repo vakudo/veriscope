@@ -13,7 +13,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=veriscope:veriscope app ./app
-COPY --chown=veriscope:veriscope bot ./bot
 
 USER veriscope
 

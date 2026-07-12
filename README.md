@@ -46,7 +46,7 @@ Veriscope instead makes the verification process transparent:
 ## Architecture
 
 ```
-Entry points (Telegram bot + browser extension)
+Entry point (browser extension)
         ↓
 Text extraction (trafilatura)
         ↓
@@ -66,8 +66,7 @@ for and against a statement".
 
 ## Stack
 
-- **FastAPI** backend (`app/`), shared by both entry points
-- **aiogram 3** Telegram bot (`bot/`)
+- **FastAPI** backend (`app/`)
 - **Manifest V3** browser extension (`extension/`)
 - **trafilatura** for article text extraction
 - **Qwen2.5** (or any OpenAI-compatible endpoint: Ollama, vLLM, OpenRouter) for
@@ -85,19 +84,13 @@ for and against a statement".
 python -m venv .venv
 .venv/Scripts/activate        # Windows; on Linux/macOS: source .venv/bin/activate
 pip install -r requirements-dev.txt
-copy .env.example .env        # fill in LLM endpoint and bot token
+copy .env.example .env        # fill in the LLM endpoint
 uvicorn app.main:app --reload
 ```
 
 An OpenAI-compatible LLM endpoint must be reachable (default:
 Ollama at `http://localhost:11434/v1` with `qwen2.5:7b-instruct` for chat and
 `bge-m3` for embeddings).
-
-Run the Telegram bot (needs `TELEGRAM_BOT_TOKEN` in `.env`):
-
-```bash
-python -m bot.main
-```
 
 Load the extension: `chrome://extensions` → Developer mode → Load unpacked →
 select the `extension/` folder. The backend URL is configurable in the popup.
@@ -108,8 +101,8 @@ select the `extension/` folder. The backend URL is configurable in the popup.
 docker compose up --build
 ```
 
-Starts Postgres with pgvector (evidence cache), the API on port 8000 and the
-bot. The LLM endpoint is configured via `.env`. Completed analyses are kept in
+Starts Postgres with pgvector (evidence cache) and the API on port 8000.
+The LLM endpoint is configured via `.env`. Completed analyses are kept in
 PostgreSQL until `RESULT_CACHE_TTL_SECONDS` expires, so repeated requests remain
 fast after an API restart; local mode uses the same policy in memory. Cached
 rows contain the structured verdict, extracted claims and evidence citations,
@@ -117,8 +110,7 @@ but not the original full article text.
 
 The runtime image runs as the unprivileged `veriscope` user and exposes a
 readiness-based Docker health check. Compose drops Linux capabilities from the
-API and bot containers, and starts the bot only after the API can reach its LLM
-dependency.
+API container.
 
 ### API
 
@@ -158,7 +150,7 @@ Set `API_ACCESS_KEY` on a hosted beta to require the `X-API-Key` header on both
 analysis endpoints. An empty value keeps local development unauthenticated.
 Health, readiness and metrics stay available to infrastructure probes. The
 browser extension stores its optional key in local extension storage (not
-synced between browsers); the Telegram bot reads the same environment setting.
+synced between browsers).
 
 ### Tests
 
@@ -346,7 +338,6 @@ app/
     manipulation.py  clickbait / anonymity / emotion / attribution heuristics
     verdict.py       verdict aggregation over independent clusters
     runner.py        pipeline orchestration
-bot/main.py          Telegram bot (aiogram 3)
 extension/           Manifest V3 browser extension
 tests/               offline unit + API tests with fakes
 ```

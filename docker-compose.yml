@@ -29,20 +29,5 @@ services:
     cap_drop:
       - ALL
 
-  bot:
-    build: .
-    restart: unless-stopped
-    command: ["python", "-m", "bot.main"]
-    env_file: .env
-    environment:
-      BACKEND_URL: http://api:8000
-    depends_on:
-      api:
-        condition: service_healthy
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-
 volumes:
   pgdata:

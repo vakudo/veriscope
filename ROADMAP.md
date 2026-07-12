@@ -33,14 +33,12 @@ priority order:
 
 - [ ] Deploy the backend (docker compose is ready: VPS + Caddy/nginx with
       HTTPS; set `API_ACCESS_KEY`, `CORS_ORIGINS` and rate limits).
-- [ ] Point the bot's `BACKEND_URL` at production, run it on the same host.
 - [x] GitHub Pages: deployed automatically by the `pages` workflow from `docs/`.
 
 ## 4. v1.0 release
 
 - [ ] Extension: icons, screenshots, Chrome Web Store listing
       (switch `host_permissions` from localhost to the production domain).
-- [ ] README: link the live bot.
 - [ ] Tag `v1.0.0` (the release workflow builds and attaches the extension ZIP).
 
 ## Deliberately out of scope
