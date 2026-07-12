@@ -128,18 +128,15 @@ class FactCheckPipeline:
             await notify({"stage": "claims_done", "total": total})
             claims_done = time.perf_counter()
             done_count = 0
-            counter_lock = asyncio.Lock()
 
             async def check_and_report(claim: Claim) -> ClaimVerdict:
                 nonlocal done_count
                 verdict = await self._check_claim(claim, exclude_domain, lang, context=title)
-                async with counter_lock:
-                    done_count += 1
-                    current = done_count
+                done_count += 1
                 await notify(
                     {
                         "stage": "claim_done",
-                        "done": current,
+                        "done": done_count,
                         "total": total,
                         "label": verdict.label.value,
                     }

@@ -1,7 +1,6 @@
 import hashlib
 import json
 import time
-from typing import Protocol
 
 import asyncpg
 
@@ -86,16 +85,6 @@ class PgResultCache:
                 payload,
                 self.ttl_seconds,
             )
-
-
-class EvidenceCache(Protocol):
-    async def get(
-        self, claim_text: str, embedding: list[float] | None
-    ) -> list[EvidenceItem] | None: ...
-
-    async def put(
-        self, claim_text: str, embedding: list[float] | None, evidence: list[EvidenceItem]
-    ) -> None: ...
 
 
 class MemoryEvidenceCache:

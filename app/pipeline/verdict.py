@@ -1,3 +1,5 @@
+from collections import Counter
+
 from app.i18n import strings_for
 from app.schemas import (
     Claim,
@@ -79,9 +81,7 @@ def build_summary(
     strings = strings_for(lang)
     if not verdicts:
         return strings["summary_empty"]
-    counts: dict[VerdictLabel, int] = {}
-    for verdict in verdicts:
-        counts[verdict.label] = counts.get(verdict.label, 0) + 1
+    counts = Counter(verdict.label for verdict in verdicts)
     parts = [
         f"{count} — {strings[f'verdict_{label.value}']}"
         for label, count in counts.items()

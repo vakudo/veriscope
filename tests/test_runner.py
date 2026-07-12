@@ -4,10 +4,10 @@ from datetime import date
 import pytest
 
 from app.cache.store import MemoryResultCache
+from app.i18n import STRINGS
 from app.pipeline.extract import Article
 from app.pipeline.runner import FactCheckPipeline
 from app.pipeline.search import SearchResult
-from app.pipeline.stance import INHERITED_RATIONALE, UNSTABLE_RATIONALE
 from app.schemas import Stance, VerdictLabel
 from tests.conftest import FakeLLM, FakeSearch
 
@@ -67,7 +67,7 @@ async def test_reprints_judged_once_and_inherit_stance(settings):
     assert verdict.independent_supporting == 1
     assert verdict.search_queries
     assert all(item.stance == Stance.supports for item in verdict.evidence)
-    inherited = [item for item in verdict.evidence if item.rationale == INHERITED_RATIONALE]
+    inherited = [item for item in verdict.evidence if item.rationale == STRINGS["ru"]["inherited"]]
     assert len(inherited) == 1
 
 
@@ -204,7 +204,7 @@ async def test_unstable_refutation_downgraded_on_recheck(settings):
     verdict = result.claims[0]
     assert verdict.label == VerdictLabel.supported
     assert verdict.independent_refuting == 0
-    downgraded = [item for item in verdict.evidence if item.rationale == UNSTABLE_RATIONALE]
+    downgraded = [item for item in verdict.evidence if item.rationale == STRINGS["ru"]["unstable"]]
     assert len(downgraded) == 1
     assert downgraded[0].stance == Stance.not_enough_info
 

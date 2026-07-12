@@ -1,6 +1,5 @@
 import re
 
-from app.i18n import STRINGS
 from app.pipeline.json_utils import extract_json_value
 from app.schemas import EvidenceItem, EvidenceSource, Stance
 
@@ -17,10 +16,6 @@ STANCE_SYSTEM = (
 )
 
 STANCE_VALUES = {stance.value for stance in Stance}
-
-INHERITED_RATIONALE = STRINGS["ru"]["inherited"]
-
-UNSTABLE_RATIONALE = STRINGS["ru"]["unstable"]
 
 ABSENCE_MARKERS = (
     "does not mention",

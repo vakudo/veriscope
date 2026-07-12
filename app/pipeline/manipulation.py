@@ -96,20 +96,15 @@ def detect_manipulation(
                 detail=strings["flag_emotional"].format(words=", ".join(emotional_hits[:8])),
             )
         )
-    anonymous_hits = [pattern.pattern for pattern in ANONYMOUS_PATTERNS if pattern.search(text)]
-    if anonymous_hits:
+    if any(pattern.search(text) for pattern in ANONYMOUS_PATTERNS):
         flags.append(
             ManipulationFlag(kind="anonymous_sources", detail=strings["flag_anonymous"])
         )
-    if title:
-        clickbait_hits = [pattern for pattern in CLICKBAIT_PATTERNS if pattern.search(title)]
-        if clickbait_hits:
-            flags.append(
-                ManipulationFlag(kind="clickbait_title", detail=strings["flag_clickbait"])
-            )
-    has_dates = bool(DATE_PATTERN.search(text))
-    has_names = bool(NAME_PATTERN.search(text))
-    if not has_dates and not has_names:
+    if title and any(pattern.search(title) for pattern in CLICKBAIT_PATTERNS):
+        flags.append(
+            ManipulationFlag(kind="clickbait_title", detail=strings["flag_clickbait"])
+        )
+    if not DATE_PATTERN.search(text) and not NAME_PATTERN.search(text):
         flags.append(
             ManipulationFlag(kind="missing_attribution", detail=strings["flag_missing"])
         )
