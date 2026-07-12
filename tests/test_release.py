@@ -22,6 +22,10 @@ def test_extension_package_is_complete_and_reproducible(tmp_path):
         names = set(archive.namelist())
     assert names == {
         "background.js",
+        "icons/icon16.png",
+        "icons/icon32.png",
+        "icons/icon48.png",
+        "icons/icon128.png",
         "manifest.json",
         "popup.css",
         "popup.html",
